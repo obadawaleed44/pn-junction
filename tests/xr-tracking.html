@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AR tracking test</title>
+  <link rel="icon" href="data:," />
+  <style>body { margin: 0; background: #111; color: #ddd; font: 13px monospace; } video { width: 640px; } pre { padding: 12px; }</style>
+</head>
+<body>
+  <!--
+    Plays the synthetic camera video (tests/fixtures/xr/card_motion.mjpeg, via
+    Chromium's fake camera) into the real card tracker and checks:
+      • nothing is "found" on the empty desk at the start,
+      • the card is found quickly and tracked most of the time while visible,
+      • the pose is right: the card's centre, projected with the tracker's own camera
+        model, lands where the card really is in the frame,
+      • tracking is lost after the card leaves the picture.
+  -->
+  <video id="video" playsinline muted></video>
+  <pre id="log">starting…</pre>
+  <script type="module">
+    import { startCamera, startCardTracker } from '../xr/js/card-tracker.js';
+
+    const log = document.getElementById('log');
+    const truth = await (await fetch('fixtures/xr/card_motion.json')).json();
+    const video = await startCamera(document.getElementById('video'));
+    const t0 = performance.now();
+    const samples = []; // { t, found, centre }
+    let tracker;
+
+    tracker = await startCardTracker({
+      video,
+      targetUrl: '../xr/assets/card.mind',
+      onPose(matrix) {
+        const t = (performance.now() - t0) / 1000;
+        samples.push({ t, found: !!matrix, centre: matrix ? project(matrix) : null });
+      },
+    });
+    const ready = (performance.now() - t0) / 1000;
+
+    // Project the card centre (origin) with the tracker's projection into video pixels.
+    function project(m) {
+      const P = tracker.projection;
+      const eye = [m[12], m[13], m[14], m[15]]; // model-view × (0,0,0,1)
+      const clip = [0, 1, 2, 3].map((r) => P[r] * eye[0] + P[4 + r] * eye[1] + P[8 + r] * eye[2] + P[12 + r] * eye[3]);
+      return [((clip[0] / clip[3] + 1) / 2) * tracker.inputWidth, ((1 - clip[1] / clip[3]) / 2) * tracker.inputHeight];
+    }
+
+    // Let one full loop of the 12 s video play after warm-up.
+    await new Promise((r) => setTimeout(r, 13000));
+    tracker.stop();
+
+    // The fake camera started playing at frame 0 when getUserMedia returned (≈ t0).
+    const frameAt = (t) => Math.floor(t * truth.fps) % truth.corners.length;
+    const report = { ready: +ready.toFixed(2), updates: samples.length };
+    const states = []; // tracked state per 0.1 s
+    let found = false;
+    let s = 0;
+    for (let t = ready; t < ready + 12.5; t += 0.1) {
+      while (s < samples.length && samples[s].t <= t) found = samples[s++].found;
+      states.push({ t, found, visible: truth.corners[frameAt(t)] !== null });
+    }
+    const visible = states.filter((x) => x.visible && x.t > ready + 0.5);
+    report.foundWhileVisible = +(visible.filter((x) => x.found).length / Math.max(visible.length, 1)).toFixed(3);
+    const empty = states.filter((x) => !x.visible);
+    report.falseWhileEmpty = +(empty.filter((x) => x.found).length / Math.max(empty.length, 1)).toFixed(3);
+
+    // Pose accuracy: compare projected centre with the true centre of the card.
+    const errors = samples.filter((x) => x.found).map((x) => {
+      const corners = truth.corners[frameAt(x.t)];
+      if (!corners) return null;
+      const cx = corners.reduce((a, c) => a + c[0], 0) / 4;
+      const cy = corners.reduce((a, c) => a + c[1], 0) / 4;
+      return Math.hypot(x.centre[0] - cx, x.centre[1] - cy);
+    }).filter((e) => e !== null).sort((a, b) => a - b);
+    report.medianCentreErrorPx = errors.length ? +errors[Math.floor(errors.length / 2)].toFixed(1) : null;
+    report.input = `${tracker.inputWidth}×${tracker.inputHeight}`;
+    log.textContent = JSON.stringify(report, null, 2);
+
+    const results = [
+      { group: 'AR tracking', name: 'tracker starts and warms up', pass: ready < 60, error: `ready after ${ready} s` },
+      { group: 'AR tracking', name: 'card tracked ≥ 70 % of the time it is visible', pass: report.foundWhileVisible >= 0.7, error: JSON.stringify(report) },
+      { group: 'AR tracking', name: 'no phantom card on the empty desk (≤ 10 %)', pass: report.falseWhileEmpty <= 0.1, error: JSON.stringify(report) },
+      { group: 'AR tracking', name: 'pose is right: projected centre within 25 px (median)', pass: report.medianCentreErrorPx !== null && report.medianCentreErrorPx <= 25, error: JSON.stringify(report) },
+    ];
+    document.title = results.every((r) => r.pass) ? 'PASSED' : 'FAILED';
+    if (new URLSearchParams(location.search).has('report')) {
+      await fetch('/__results', { method: 'POST', body: JSON.stringify(results) });
+    }
+  </script>
+</body>
+</html>

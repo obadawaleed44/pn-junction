@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1c2623" />
+  <title>Bench 58 · The Reverse-Biased Junction</title>
+  <meta name="description" content="A 1958 semiconductor lab bench: turn the power supply, watch the depletion region widen under the microscope, its field on the oscilloscope, and log your experiment." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23141414'/%3E%3Cpath d='M16 16 L16 5' stroke='%23efe6cf' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Nixie+One&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" />
+  <link rel="stylesheet" href="bench.css" />
+
+  <script type="importmap">
+    { "imports": { "katex": "https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.mjs" } }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <!-- ============================================================ header plaque -->
+  <header class="plaque">
+    <div class="plaque-title">
+      <span class="model">PN-58</span>
+      <div>
+        <h1>The Reverse-Biased Junction</h1>
+        <p>Experiment 7 · How a reverse voltage widens the depletion region and strengthens its field</p>
+      </div>
+    </div>
+    <nav class="plaque-links">
+      <a href="../index.html">Exhibit</a>
+      <a href="../mystery.html">Mystery Diode</a>
+      <button type="button" class="toggle" id="sound-toggle" aria-pressed="true" title="Sound">Sound <span class="lamp"></span></button>
+    </nav>
+  </header>
+
+  <main class="bench">
+    <!-- ============================================================ power supply -->
+    <section class="instrument psu" aria-label="Power supply">
+      <div class="instrument-name">Regulated power supply <span>0 – 120 V DC</span></div>
+
+      <div class="nixie-row">
+        <div class="nixie" id="nixie" aria-live="off" aria-label="Reverse voltage"></div>
+        <span class="nixie-unit">VOLTS</span>
+      </div>
+
+      <div class="psu-controls">
+        <div class="knob-wrap big">
+          <div class="knob" id="knob-voltage"></div>
+          <span class="engraved">Reverse voltage</span>
+        </div>
+        <div class="psu-side">
+          <button type="button" class="switch" id="output-switch" aria-pressed="true">
+            <span class="switch-lever"></span>
+            <span class="engraved">Output</span>
+          </button>
+          <div class="lamp-row"><span class="lamp big" id="lamp-output"></span><span class="engraved">On</span></div>
+          <div class="lamp-row"><span class="lamp big red" id="lamp-fuse"></span><span class="engraved">Fuse</span></div>
+          <button type="button" class="bakelite-button" id="record">Record</button>
+        </div>
+      </div>
+
+      <div class="terminals">
+        <span class="terminal black">−</span><span class="engraved">to p-side</span>
+        <span class="terminal red">+</span><span class="engraved">to n-side</span>
+      </div>
+      <button type="button" class="fuse-card" id="replace-fuse" hidden>Fuse blown! Replace fuse</button>
+
+      <details class="tag">
+        <summary>?</summary>
+        <p>Minus on <b>p</b>, plus on <b>n</b>: <b>reverse bias</b>. The supply pulls holes and electrons away from the junction, so more fixed ions are uncovered. Drag the knob in a circle, use the mouse wheel, or the ← → keys (Shift = coarse).</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ microscope -->
+    <section class="instrument microscope" aria-label="Microscope">
+      <div class="instrument-name">Metallurgical microscope <span id="mag-label">× 2 000</span></div>
+      <div class="eyepiece">
+        <canvas id="micro" aria-label="Cross-section of the junction under the microscope"></canvas>
+      </div>
+      <div class="micro-controls">
+        <div class="knob-wrap small">
+          <div class="knob" id="knob-mag"></div>
+          <span class="engraved">Magnification</span>
+        </div>
+        <ul class="legend">
+          <li><span class="sym hole"></span> hole (+, free)</li>
+          <li><span class="sym electron"></span> electron (−, free)</li>
+          <li><span class="sym acceptor">−</span> acceptor ion (fixed)</li>
+          <li><span class="sym donor">+</span> donor ion (fixed)</li>
+          <li><span class="sym arrow">←</span> electric field</li>
+        </ul>
+      </div>
+      <details class="tag">
+        <summary>?</summary>
+        <p>A cut through the junction, stained: <b>p</b> rose, <b>n</b> blue. The clear band in the middle is the <b>depletion region</b>: only fixed ions are left there. Use the scale in the eyepiece to measure its width W yourself.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ oscilloscope -->
+    <section class="instrument scope" aria-label="Oscilloscope">
+      <div class="instrument-name">Cathode-ray oscilloscope <span>along the sample</span></div>
+      <div class="crt">
+        <canvas id="scope-grid"></canvas>
+        <canvas id="scope-trace" aria-label="Oscilloscope trace"></canvas>
+        <div class="crt-readout" id="scope-readout"></div>
+      </div>
+      <div class="scope-controls">
+        <div class="knob-wrap small">
+          <div class="knob" id="knob-channel"></div>
+          <span class="engraved">Channel</span>
+        </div>
+        <p class="scope-caption" id="scope-caption"></p>
+      </div>
+      <details class="tag">
+        <summary>?</summary>
+        <p>The beam sweeps across the same stretch of sample you see in the microscope. Channels: <b>ρ</b> charge density, <b>E</b> electric field, <b>V</b> potential, <b>BANDS</b> electron energy (E<sub>c</sub>, E<sub>v</sub>, E<sub>F</sub>).</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ sample controls -->
+    <section class="instrument sample" aria-label="Sample">
+      <div class="instrument-name">Specimen <span>area 100 µm × 100 µm</span></div>
+      <div class="tray" role="group" aria-label="Material">
+        <button type="button" class="chip" data-material="Si"><b>Si</b><span>silicon</span></button>
+        <button type="button" class="chip" data-material="Ge"><b>Ge</b><span>germanium</span></button>
+        <button type="button" class="chip" data-material="GaAs"><b>GaAs</b><span>gallium arsenide</span></button>
+      </div>
+      <div class="sample-knobs">
+        <div class="knob-wrap small">
+          <div class="knob" id="knob-na"></div>
+          <span class="engraved">N<sub>A</sub> p-side</span>
+          <span class="knob-value" id="value-na"></span>
+        </div>
+        <div class="knob-wrap small">
+          <div class="knob" id="knob-nd"></div>
+          <span class="engraved">N<sub>D</sub> n-side</span>
+          <span class="knob-value" id="value-nd"></span>
+        </div>
+        <div class="knob-wrap small">
+          <div class="knob" id="knob-heat"></div>
+          <span class="engraved">Heater</span>
+          <span class="knob-value" id="value-t"></span>
+        </div>
+      </div>
+      <dl class="constants" id="constants"></dl>
+      <details class="tag">
+        <summary>?</summary>
+        <p>Doping in cm⁻³. More doping packs the ions closer, so fewer have to be uncovered: W shrinks and reaches mostly into the <b>lighter</b> side (N<sub>A</sub>x<sub>p</sub> = N<sub>D</sub>x<sub>n</sub>). Heat raises n<sub>i</sub> and lowers V<sub>bi</sub>.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ meters -->
+    <section class="instrument meters" aria-label="Meters">
+      <div class="instrument-name">Panel meters</div>
+      <div class="meter-row">
+        <div class="meter" id="meter-w"></div>
+        <div class="meter" id="meter-e"></div>
+        <div class="meter" id="meter-c"></div>
+      </div>
+      <details class="tag">
+        <summary>?</summary>
+        <p><b>W</b> grows like √(V<sub>bi</sub> + V<sub>R</sub>). <b>E<sub>max</sub></b> = 2(V<sub>bi</sub> + V<sub>R</sub>)/W also grows like the square root; past the red line (E<sub>crit</sub>) the junction breaks down. <b>C</b> = ε<sub>s</sub>A/W: a wider gap means less capacitance.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ lab notebook -->
+    <section class="notebook" aria-label="Lab notebook">
+      <div class="notebook-head">
+        <h2>Lab notebook</h2>
+        <button type="button" class="pencil" id="clear-log">clear page</button>
+      </div>
+      <div class="equations" id="equations"></div>
+      <ol class="experiments" id="experiments"></ol>
+      <table class="log">
+        <thead><tr><th>V<sub>R</sub> (V)</th><th>W (µm)</th><th>E<sub>max</sub> (V/cm)</th><th>C (pF)</th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      <canvas class="log-plot" id="log-plot" aria-label="Plot of W squared against reverse voltage"></canvas>
+      <p class="log-note" id="log-note"></p>
+    </section>
+  </main>
+
+  <div class="smoke" id="smoke" aria-hidden="true"></div>
+  <p class="bench-hint" id="hint">Turn the big black knob.</p>
+</body>
+</html>

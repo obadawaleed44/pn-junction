@@ -1,0 +1,16 @@
+# Raw recordings are large; keep only the converted fake-camera file (tests/fixtures/*.mjpeg).
+tests/fixtures/*.mp4
+tests/fixtures/*.mov
+tests/fixtures/*.webm
+tests/fixtures/*.y4m
+# Synthetic AR test video (26 MB); rebuild with: python xr/tools/make_test_video.py
+tests/fixtures/xr/card_motion.mjpeg
+
+# Local safety copies (zip snapshots of the project); not part of the website.
+backups/
+
+__pycache__/
+*.pyc
+.claude/
+.DS_Store
+Thumbs.db

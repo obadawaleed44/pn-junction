@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" data-theme="nebula">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#04040b" />
+  <title>Depletion AR · the junction in your room</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap" />
+  <link rel="stylesheet" href="css/xr.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="ar">
+  <video id="camera" playsinline muted autoplay></video>
+  <canvas id="ar-scene"></canvas>
+
+  <!-- Start screen -->
+  <section class="ar-start" id="ar-start">
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span><span><b>Depletion</b><small>AR</small></span></a>
+    <div class="ar-start-body">
+      <p class="eyebrow">Augmented reality</p>
+      <h1>The junction,<br />in your hands.</h1>
+      <p class="lede">A reverse-biased PN junction appears on the card. Slide the voltage and watch the depletion region open, live on your desk.</p>
+      <div class="ar-modes">
+        <button class="mode" id="start-card" type="button">
+          <span class="mode-icon card" aria-hidden="true"></span>
+          <span><b>Card mode</b><small>Point at the card: on a screen or printed. Works on every phone.</small></span>
+        </button>
+        <button class="mode" id="start-table" type="button" hidden>
+          <span class="mode-icon table" aria-hidden="true"></span>
+          <span><b>Table mode</b><small>No card: place it on any flat surface (Android, ARCore).</small></span>
+        </button>
+      </div>
+      <p class="hint">No card? <a href="card.html">Open the card</a> on another screen or print it. The camera image stays on your phone.</p>
+      <p class="warn" id="ar-error" hidden></p>
+    </div>
+  </section>
+
+  <!-- Everything shown on top of the camera (also the WebXR DOM overlay) -->
+  <div class="ar-overlay" id="ar-overlay" hidden>
+    <div class="ar-top">
+      <button class="round" id="ar-exit" type="button" aria-label="Back">←</button>
+      <div class="status" id="ar-status"><span class="pulse"></span><span id="ar-status-text">Looking for the card…</span></div>
+      <button class="round" id="ar-labels" type="button" aria-label="Labels on or off" aria-pressed="true">Aa</button>
+    </div>
+
+    <div class="ar-guide" id="ar-guide">
+      <div class="ghost-card"><span></span></div>
+      <p id="ar-guide-text">Point your camera at the card. Hold the phone 20–40 cm away.</p>
+    </div>
+
+    <div class="ar-sheet" id="ar-sheet">
+      <div class="ar-read">
+        <div><span><i>V</i><sub>R</sub></span><b id="a-vr">0.00 V</b></div>
+        <div><span><i>W</i></span><b id="a-w">–</b></div>
+        <div><span><i>E</i><sub>max</sub>/<i>E</i><sub>crit</sub></span><b id="a-e">–</b></div>
+      </div>
+      <input id="a-slider" type="range" min="0" max="1000" value="0" aria-label="Reverse voltage" />
+      <div class="ar-chips">
+        <button class="chip" id="a-sweep" type="button" aria-pressed="false">▶ Sweep</button>
+        <button class="chip" id="a-plot" type="button">Plot: Bands</button>
+        <button class="chip" id="a-doping" type="button">Symmetric</button>
+        <button class="chip" id="a-pose" type="button" hidden>View: facing you</button>
+        <button class="chip" id="a-place" type="button" hidden>Move</button>
+      </div>
+      <p class="ar-tip" id="ar-tip">Tap any part of the model to learn what it is.</p>
+    </div>
+
+    <div class="explain" id="explain" hidden role="dialog" aria-labelledby="explain-title">
+      <button class="close" id="explain-close" type="button" aria-label="Close">×</button>
+      <p class="eyebrow" id="explain-kind"></p>
+      <h3 id="explain-title"></h3>
+      <div id="explain-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/ar-main.js"></script>
+</body>
+</html>

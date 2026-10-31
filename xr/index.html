@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en" data-theme="nebula">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Depletion · a PN junction in 3D and AR</title>
+  <meta name="description" content="A reverse-biased PN junction you can explore in 3D and place in your room with your phone (AR)." />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="css/xr.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+</head>
+<body class="site">
+  <canvas id="scene" aria-label="3D model of a reverse-biased PN junction. Drag to turn it, scroll to zoom, click a part to learn what it is."></canvas>
+
+  <!-- Cinematic title, fades after the intro flight -->
+  <div class="title-card" id="title-card">
+    <p class="eyebrow">Semiconductor devices · reverse bias</p>
+    <h1>Depletion</h1>
+    <p class="lede">Two halves of silicon. One battery. Watch the gap between them open up — then put it on your desk.</p>
+    <button class="ghost" id="skip-intro" type="button">Skip intro</button>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Depletion, home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span><b>Depletion</b><small>PN junction · 3D + AR</small></span>
+    </a>
+    <nav class="top-actions">
+      <button class="chip" id="tour-start" type="button">Guided tour</button>
+      <a class="chip" href="../index.html" title="The original exhibit with hand control">Hand-control version</a>
+    </nav>
+  </header>
+
+  <!-- Controls -->
+  <aside class="panel" id="panel" aria-label="Controls">
+    <button class="sheet-handle" id="sheet-handle" type="button" aria-label="Show or hide the controls"><span></span></button>
+
+    <section class="voltage">
+      <div class="voltage-head">
+        <label for="vr">Reverse voltage <i>V</i><sub>R</sub></label>
+        <output id="vr-out" for="vr">0.00 V</output>
+      </div>
+      <input id="vr" type="range" min="0" max="1000" value="0" step="1" aria-describedby="vr-range" />
+      <div class="range-ends" id="vr-range"><span>0 V</span><span id="vr-max">V<sub>BR</sub></span></div>
+      <div class="row">
+        <button class="chip" id="sweep" type="button" aria-pressed="false">▶ Sweep</button>
+        <button class="chip" id="vr-zero" type="button">0 V</button>
+        <button class="chip danger" id="vr-break" type="button">Breakdown</button>
+      </div>
+    </section>
+
+    <section class="readouts" aria-live="polite">
+      <div class="readout big"><span>Depletion width <i>W</i></span><b id="r-w">–</b></div>
+      <div class="readout"><span><i>x</i><sub>p</sub> (p-side)</span><b id="r-xp">–</b></div>
+      <div class="readout"><span><i>x</i><sub>n</sub> (n-side)</span><b id="r-xn">–</b></div>
+      <div class="readout wide">
+        <span>Peak field <i>E</i><sub>max</sub></span><b id="r-emax">–</b>
+        <div class="meter" aria-hidden="true"><div id="r-emax-bar"></div></div>
+        <small id="r-ratio">–</small>
+      </div>
+      <div class="readout"><span>Built-in <i>V</i><sub>bi</sub></span><b id="r-vbi">–</b></div>
+      <div class="readout"><span>Capacitance <i>C/A</i></span><b id="r-c">–</b></div>
+    </section>
+
+    <details class="group" open>
+      <summary>Junction</summary>
+      <div class="field-row" role="group" aria-label="Material">
+        <span class="field-label">Material</span>
+        <button class="seg" data-material="Si" aria-pressed="true">Si</button>
+        <button class="seg" data-material="Ge" aria-pressed="false">Ge</button>
+        <button class="seg" data-material="GaAs" aria-pressed="false">GaAs</button>
+      </div>
+      <div class="field-row" role="group" aria-label="Doping">
+        <span class="field-label">Doping</span>
+        <button class="seg" data-doping="symmetric" aria-pressed="true">Symmetric</button>
+        <button class="seg" data-doping="pn" aria-pressed="false">p⁺n</button>
+        <button class="seg" data-doping="np" aria-pressed="false">n⁺p</button>
+        <button class="seg" data-doping="light" aria-pressed="false">Light</button>
+      </div>
+      <p class="hint" id="doping-note"></p>
+      <div class="field-row">
+        <label class="field-label" for="temp">Temperature</label>
+        <input id="temp" type="range" min="250" max="400" step="5" value="300" />
+        <output id="temp-out" for="temp">300 K</output>
+      </div>
+    </details>
+
+    <details class="group" open>
+      <summary>Show</summary>
+      <div class="toggles">
+        <button class="toggle" data-show="carriers" aria-pressed="true"><i class="dot hole"></i>Carriers</button>
+        <button class="toggle" data-show="ions" aria-pressed="true"><i class="dot ion"></i>Ions</button>
+        <button class="toggle" data-show="field" aria-pressed="true"><i class="dot field"></i>Field</button>
+        <button class="toggle" data-show="plot" aria-pressed="true"><i class="dot plot"></i>Plot</button>
+        <button class="toggle" data-show="labels" aria-pressed="true">Labels</button>
+        <button class="toggle" data-show="circuit" aria-pressed="true">Battery</button>
+      </div>
+      <div class="field-row" role="group" aria-label="Plot">
+        <span class="field-label">Plot</span>
+        <button class="seg" data-plot="bands" aria-pressed="true">Bands</button>
+        <button class="seg" data-plot="field" aria-pressed="false">E(x)</button>
+        <button class="seg" data-plot="potential" aria-pressed="false">V(x)</button>
+        <button class="seg" data-plot="charge" aria-pressed="false">ρ(x)</button>
+      </div>
+    </details>
+  </aside>
+
+  <!-- Bottom dock: themes + AR -->
+  <footer class="dock">
+    <div class="themes" role="group" aria-label="Theme">
+      <button class="swatch" data-theme="nebula" title="Nebula" aria-pressed="true"></button>
+      <button class="swatch" data-theme="cleanroom" title="Cleanroom" aria-pressed="false"></button>
+      <button class="swatch" data-theme="blueprint" title="Blueprint" aria-pressed="false"></button>
+      <button class="swatch" data-theme="sunset" title="Sunset" aria-pressed="false"></button>
+    </div>
+    <button class="ar-cta" id="ar-open" type="button">
+      <span class="ar-icon" aria-hidden="true"></span>
+      <span><b>See it in your room</b><small>AR on your phone</small></span>
+    </button>
+  </footer>
+
+  <!-- Click-to-explain -->
+  <div class="explain" id="explain" hidden role="dialog" aria-labelledby="explain-title">
+    <button class="close" id="explain-close" type="button" aria-label="Close">×</button>
+    <p class="eyebrow" id="explain-kind"></p>
+    <h3 id="explain-title"></h3>
+    <div id="explain-body"></div>
+  </div>
+  <p class="pick-hint" id="pick-hint">Drag to turn · scroll to zoom · click any part to learn what it is</p>
+
+  <!-- Guided tour -->
+  <div class="tour" id="tour" hidden role="dialog" aria-labelledby="tour-title">
+    <div class="tour-progress" id="tour-progress"></div>
+    <p class="eyebrow" id="tour-step"></p>
+    <h3 id="tour-title"></h3>
+    <div id="tour-body"></div>
+    <div class="row end">
+      <button class="chip" id="tour-prev" type="button">Back</button>
+      <button class="chip primary" id="tour-next" type="button">Next</button>
+      <button class="chip" id="tour-close" type="button">Close</button>
+    </div>
+  </div>
+
+  <!-- AR handoff -->
+  <dialog class="ar-dialog" id="ar-dialog" aria-labelledby="ar-title">
+    <button class="close" id="ar-close" type="button" aria-label="Close">×</button>
+    <div class="ar-grid">
+      <div class="ar-steps">
+        <p class="eyebrow">Augmented reality</p>
+        <h2 id="ar-title">Put the junction on your desk</h2>
+        <ol>
+          <li><b>Scan this code</b> with your phone camera.</li>
+          <li><b>Allow the camera</b> when your browser asks.</li>
+          <li><b>Point the phone at the card</b> — the one on this screen works, or print it.</li>
+        </ol>
+        <div class="qr-wrap"><canvas id="qr" width="232" height="232" aria-label="QR code that opens the AR page"></canvas></div>
+        <p class="url" id="ar-url"></p>
+        <p class="warn" id="ar-local" hidden>This address is your own computer (localhost), so a phone can't open it. Use the published GitHub Pages address instead.</p>
+        <p class="hint">Android with ARCore also offers <b>Table mode</b>: no card needed, the junction stands on any flat surface.</p>
+      </div>
+      <figure class="ar-card">
+        <img src="assets/card.png" alt="The AR card: a p region, ions in the middle, an n region" id="ar-card-img" />
+        <figcaption>
+          <button class="chip" id="card-full" type="button">Show card full screen</button>
+          <a class="chip" href="card.html" target="_blank" rel="noopener">Print the card</a>
+        </figcaption>
+      </figure>
+    </div>
+  </dialog>
+
+  <noscript><p class="noscript">This page needs JavaScript and WebGL.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

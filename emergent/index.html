@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f3f1ec" />
+  <title>Emergent · A PN junction solved live</title>
+  <meta name="description" content="No formula draws this junction: your browser solves Poisson's equation live, 110 000 particles sample the solution, and a neural network learns the physics from the solver." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='16' r='5' fill='%23e2335f'/%3E%3Ccircle cx='23' cy='16' r='5' fill='%232457e3'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" />
+  <link rel="stylesheet" href="style.css" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+        "katex": "https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i></i></span>
+      <div>
+        <h1>Emergent</h1>
+        <p>A PN junction, solved live in your browser</p>
+      </div>
+    </div>
+    <div class="solver-pill" id="solver-pill" aria-live="polite">Solving…</div>
+    <nav class="links">
+      <a href="../index.html">Exhibit</a>
+      <a href="../bench/">Bench 58</a>
+      <a href="../mystery.html">Mystery Diode</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <!-- ============================================================ 3D -->
+    <section class="stage" aria-label="3D view of the solved junction">
+      <canvas id="scene"></canvas>
+      <div id="labels" aria-hidden="true"></div>
+      <div class="intro-card">
+        <h2>No formula draws this.</h2>
+        <p>Your browser solves Poisson's equation for the real carrier densities, and every dot is a sample of that solution. The depletion region appears on its own.</p>
+        <ul class="legend">
+          <li><i class="dot holes"></i>holes</li>
+          <li><i class="dot electrons"></i>electrons</li>
+          <li><i class="sq negative"></i>− fixed charge</li>
+          <li><i class="sq positive"></i>+ fixed charge</li>
+          <li><i class="bar field"></i>field (n → p)</li>
+        </ul>
+        <label class="check"><input type="checkbox" id="box-toggle" checked /> Show the textbook's sharp edges</label>
+      </div>
+      <button type="button" class="ghost reset-view" id="reset-view">Reset view</button>
+      <p class="stage-hint">Drag to orbit · scroll to zoom</p>
+    </section>
+
+    <!-- ============================================================ controls -->
+    <section class="dock" aria-label="Controls">
+      <div class="rail-wrap">
+        <p class="dock-label">Reverse voltage · drag along the curve the solver computed <span>(dashed: textbook)</span></p>
+        <canvas id="rail" aria-label="Reverse voltage: W against V_R"></canvas>
+      </div>
+      <div class="params">
+        <div class="seg" role="group" aria-label="Material">
+          <button type="button" data-material="Si">Si</button>
+          <button type="button" data-material="Ge">Ge</button>
+          <button type="button" data-material="GaAs">GaAs</button>
+        </div>
+        <div class="stepper"><span class="key holes">N<sub>A</sub></span><button type="button" data-key="NA" data-step="-1" aria-label="Lower N_A">−</button><b id="val-NA"></b><button type="button" data-key="NA" data-step="1" aria-label="Raise N_A">+</button></div>
+        <div class="stepper"><span class="key electrons">N<sub>D</sub></span><button type="button" data-key="ND" data-step="-1" aria-label="Lower N_D">−</button><b id="val-ND"></b><button type="button" data-key="ND" data-step="1" aria-label="Raise N_D">+</button></div>
+        <div class="stepper"><span class="key">T</span><button type="button" data-key="T" data-step="-1" aria-label="Colder">−</button><b id="val-T"></b><button type="button" data-key="T" data-step="1" aria-label="Hotter">+</button></div>
+        <p class="consts" id="consts"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================ side panels -->
+    <aside class="side">
+      <article class="card">
+        <h3>Three ways to know W</h3>
+        <table class="compare">
+          <thead><tr><th></th><th>W</th><th>E<sub>max</sub></th><th>vs solver</th></tr></thead>
+          <tbody>
+            <tr><th>Textbook formula<small>assumes sharp edges</small></th><td id="cmp-formula-w"></td><td id="cmp-formula-e"></td><td id="cmp-formula-d"></td></tr>
+            <tr class="solver"><th>Numerical solver<small>Poisson, no assumptions</small></th><td id="cmp-solver-w"></td><td id="cmp-solver-e"></td><td>reference</td></tr>
+            <tr class="net"><th>Neural network<small>learned from the solver</small></th><td id="cmp-net-w"></td><td id="cmp-net-e"></td><td id="cmp-net-d"></td></tr>
+          </tbody>
+        </table>
+        <p class="note" id="cmp-note"></p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>A neural network learns the junction</h3>
+          <button type="button" class="ghost small" id="retrain" disabled>Retrain</button>
+        </div>
+        <p class="note">A 7 → 24 → 24 → 2 network, written from scratch (backpropagation + Adam), trains right now on hundreds of solver runs in a background thread.</p>
+        <div class="progress"><div id="nn-bar"></div></div>
+        <p class="status" id="nn-status"></p>
+        <canvas class="chart loss" id="loss" aria-label="Training loss"></canvas>
+        <canvas class="chart network" id="network" aria-label="The neural network, neurons coloured by activation"></canvas>
+      </article>
+
+      <article class="card">
+        <h3>What the textbook hides</h3>
+        <p class="note">Electron and hole densities on a <b>log scale</b>. The shaded box is the textbook's sharp depletion region; the real carriers fade out over a few Debye lengths and never quite reach zero.</p>
+        <canvas class="chart profile" id="profile" aria-label="Carrier densities on a log scale"></canvas>
+      </article>
+
+      <details class="card equations">
+        <summary><h3>The equations being solved</h3></summary>
+        <div id="eq-poisson"></div>
+        <div id="eq-carriers"></div>
+        <div id="eq-newton"></div>
+        <p class="note">Adaptive mesh with spacing ≈ ¼ Debye length; each Newton step solves a tridiagonal system with the Thomas algorithm in O(N); log damping keeps the exponentials stable. Quasi-Fermi levels: φ<sub>p</sub> = 0, φ<sub>n</sub> = V<sub>R</sub>.</p>
+      </details>
+    </aside>
+  </main>
+</body>
+</html>

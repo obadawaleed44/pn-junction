@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Depletion AR card · print or show on a screen</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="css/xr.css" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+  <style>
+    body.card-page { overflow: auto; background: #0b0b14; }
+    .sheet { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+    .sheet h1 { font: 700 34px/1.1 var(--display); margin: 4px 0 8px; letter-spacing: -0.02em; }
+    .sheet > p { color: var(--muted); max-width: 640px; }
+    .print-card { margin: 26px 0; padding: 18px; border: 1px dashed rgba(255, 255, 255, 0.25); border-radius: 18px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; }
+    .print-card img { width: 100%; display: block; border-radius: 6px; }
+    .side { text-align: center; }
+    .side canvas { width: 150px; height: 150px; background: #fff; border-radius: 10px; padding: 8px; image-rendering: pixelated; }
+    .side small { display: block; color: var(--muted); margin-top: 6px; max-width: 170px; }
+    .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .tips div { background: rgba(255, 255, 255, 0.05); border-radius: 14px; padding: 14px 16px; }
+    .tips b { display: block; font-family: var(--display); margin-bottom: 4px; }
+    .tips p { margin: 0; color: var(--muted); font-size: 14px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 640px) { .print-card { grid-template-columns: 1fr; } }
+    @media print {
+      @page { size: A4 portrait; margin: 14mm; }
+      body.card-page { background: #fff; color: #000; }
+      .actions, .tips, .sheet > p.screen-only { display: none !important; }
+      .sheet { padding: 0; }
+      .sheet h1, .eyebrow { color: #000; }
+      .print-card { border: 1px dashed #999; break-inside: avoid; grid-template-columns: 1fr; }
+      .print-card img { width: 160mm; margin: 0 auto; border-radius: 0; }
+      .side small { color: #333; max-width: none; }
+    }
+  </style>
+</head>
+<body class="card-page">
+  <main class="sheet">
+    <p class="eyebrow">Depletion · AR card</p>
+    <h1>The card your phone looks for</h1>
+    <p class="screen-only">Your phone recognises this exact picture and places the 3D junction on it. Print it (any printer, colour or black and white) or just show it on a screen, then open the AR page on your phone.</p>
+    <div class="actions">
+      <button class="chip primary" type="button" onclick="print()">Print the card</button>
+      <button class="chip" type="button" id="full">Show full screen</button>
+      <a class="chip" href="./">Back to the 3D site</a>
+    </div>
+
+    <div class="print-card">
+      <img src="assets/card.png" alt="AR card: p region, ions, n region" id="card" />
+      <div class="side">
+        <canvas id="qr" width="232" height="232" aria-label="QR code that opens the AR page"></canvas>
+        <small>Scan to open the AR page, then point the phone at the card.</small>
+      </div>
+    </div>
+
+    <div class="tips">
+      <div><b>Keep it flat</b><p>A bent or creased card tracks worse. Glue it on cardboard if you can.</p></div>
+      <div><b>Good light, no glare</b><p>Avoid reflections from lamps on glossy paper or on the screen.</p></div>
+      <div><b>20–40 cm away</b><p>The whole card should be in view. Move slowly; it re-locks in a moment if lost.</p></div>
+      <div><b>On a screen?</b><p>Turn the brightness up. Laptop, tablet or a second phone all work.</p></div>
+    </div>
+  </main>
+  <script type="module">
+    import { drawQR } from './js/qr.js';
+    drawQR(document.getElementById('qr'), new URL('ar.html', location.href).href);
+    document.getElementById('full').addEventListener('click', () => document.getElementById('card').requestFullscreen?.());
+  </script>
+</body>
+</html>

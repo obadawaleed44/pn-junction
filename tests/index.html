@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unit tests · Pull the Junction Apart</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 40px 24px;
+      background: #05070b;
+      color: #eceef3;
+      font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-weight: 400; font-size: 30px; }
+    .summary { margin: 0 0 28px; color: #7d8697; }
+    .summary.pass { color: #8ee6b8; }
+    .summary.fail { color: #ff7a5c; }
+    h2 { margin: 28px 0 10px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #7d8697; font-weight: 500; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { padding: 8px 0; border-top: 1px solid rgba(236, 238, 243, 0.08); display: flex; gap: 12px; }
+    li::before { content: '✓'; color: #8ee6b8; width: 1em; flex: none; }
+    li.fail::before { content: '✗'; color: #ff7a5c; }
+    .error { display: block; color: #ff9d85; font-size: 13px; }
+    pre { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Unit tests</h1>
+    <p class="summary" id="summary">Running…</p>
+    <div id="groups"></div>
+    <pre id="results"></pre>
+  </main>
+  <script type="module">
+    import { setGroup, runAll } from './harness.js';
+
+    // Test files register their tests when imported. A file that fails to load
+    // is reported as a failed test instead of silently stopping the page.
+    const loadErrors = [];
+    for (const [group, path] of [
+      ['Physics', './physics.test.js'],
+      ['C–V measurement', './measure.test.js'],
+      ['Emergent: solver and neural network', './emergent.test.js'],
+      ['Hand control', './input.test.js'],
+      ['AR model: physics → 3D', './xr.test.js'],
+    ]) {
+      setGroup(group);
+      try {
+        await import(path);
+      } catch (err) {
+        loadErrors.push({ group, name: `${path} loads`, pass: false, error: err.message });
+      }
+    }
+
+    const all = [...loadErrors, ...(await runAll())];
+    for (const title of [...new Set(all.map((r) => r.group))]) {
+      const section = document.createElement('section');
+      section.innerHTML = `<h2>${title}</h2><ul></ul>`;
+      for (const r of all.filter((r) => r.group === title)) {
+        const li = document.createElement('li');
+        li.className = r.pass ? 'pass' : 'fail';
+        li.innerHTML = `<span>${r.name}${r.pass ? '' : `<span class="error"></span>`}</span>`;
+        if (!r.pass) li.querySelector('.error').textContent = r.error;
+        section.querySelector('ul').appendChild(li);
+      }
+      document.getElementById('groups').appendChild(section);
+    }
+    const failed = all.filter((r) => !r.pass).length;
+    const summary = document.getElementById('summary');
+    summary.textContent = failed ? `${failed} of ${all.length} tests failed` : `All ${all.length} tests passed`;
+    summary.className = `summary ${failed ? 'fail' : 'pass'}`;
+    document.getElementById('results').textContent = JSON.stringify(all);
+    document.title = failed ? 'FAILED' : 'PASSED';
+    // When started by tests/run_tests.py, send the results back to it.
+    if (new URLSearchParams(location.search).has('report')) {
+      await fetch('/__results', { method: 'POST', body: JSON.stringify(all) });
+    }
+  </script>
+</body>
+</html>

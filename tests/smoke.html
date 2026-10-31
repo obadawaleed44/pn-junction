@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Smoke test · Pull the Junction Apart</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; display: flex; gap: 24px; padding: 24px; background: #05070b; color: #eceef3; font: 14px/1.5 system-ui, sans-serif; }
+    iframe { flex: none; border: 1px solid #222; background: #000; }
+    ol { margin: 0; padding-left: 20px; min-width: 320px; }
+    li.pass { color: #8ee6b8; }
+    li.fail { color: #ff7a5c; }
+    li small { display: block; color: #9aa3b5; }
+  </style>
+</head>
+<body>
+  <!-- The real app, driven from outside like a visitor would use it. -->
+  <iframe id="app" src="../index.html" width="1280" height="800" allow="camera; autoplay"></iframe>
+  <ol id="log"></ol>
+
+  <script type="module">
+    // ?camera  -> also test the webcam pipeline (the runner starts the browser with a fake camera)
+    // ?hands   -> the fake camera plays our recorded video of hands: expect real tracking
+    // ?report  -> POST the results to the test runner (tests/run_tests.py)
+    const params = new URLSearchParams(location.search);
+    const frame = document.getElementById('app');
+    const steps = [];
+    const step = (name, fn, { when = true } = {}) => when && steps.push({ name, fn });
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function until(condition, timeout = 8000, what = 'condition') {
+      const start = performance.now();
+      while (performance.now() - start < timeout) {
+        try { if (condition()) return; } catch { /* not ready yet */ }
+        await wait(50);
+      }
+      throw new Error(`timed out waiting for ${what}`);
+    }
+    const expect = (condition, message) => { if (!condition) throw new Error(message); };
+    const win = () => frame.contentWindow;
+    const doc = () => frame.contentDocument;
+    const pn = () => win().__pn;
+    const $ = (id) => doc().getElementById(id);
+    const click = (el) => el.click();
+    const key = (k, shiftKey = false) => win().dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true }));
+    const buttonByText = (text) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim() === text);
+    const testCharges = () => {
+      let n = 0;
+      pn().stage.scene.traverse((o) => { if (o.isMesh && o.geometry?.parameters?.radius === 0.075) n++; });
+      return n;
+    };
+    const errors = [];
+
+    // --------------------------------------------------------------- steps
+
+    step('app boots: modules load, scene renders, no errors', async () => {
+      await until(() => pn(), 30000, 'window.__pn');
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      // Synthetic (scripted) pointers can't be "captured" like a real mouse; the view
+      // rotation asks for capture, so give the canvas a harmless stand-in.
+      $('scene').setPointerCapture = () => {};
+      $('scene').releasePointerCapture = () => {};
+      await wait(500);
+      expect(!$('intro').hidden, 'intro should be visible');
+      expect($('hud-w').textContent.includes('µm'), 'HUD shows W');
+    });
+
+    step('chapter 1: halves join and the depletion region forms to W ≈ 0.43 µm', async () => {
+      click($('begin'));
+      await until(() => pn().state.formationTime >= 5, 30000, 'formation animation');
+      await wait(300);
+      expect($('hud-w').textContent === '0.43 µm', `HUD W = ${$('hud-w').textContent}`);
+      expect($('hud-vr').textContent === '0.00 V', `HUD V_R = ${$('hud-vr').textContent}`);
+    });
+
+    step('chapter 2: tapping inside the gap drops a test charge', async () => {
+      click($('story-next'));
+      await wait(2500); // camera flight
+      const V = pn().stage.camera.position.constructor;
+      const p = pn().stage.project(new V(0.05, 0, 0.7));
+      const canvas = $('scene');
+      const ev = (type) => canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 7, clientX: p.x, clientY: p.y, pointerType: 'mouse', bubbles: true }));
+      ev('pointerdown');
+      ev('pointerup');
+      expect(testCharges() === 1, `expected 1 test charge, found ${testCharges()}`);
+    });
+
+    step('chapter 3: the prediction question gates the controls', async () => {
+      click($('story-next'));
+      await wait(300);
+      expect(!$('predict').hidden, 'prediction card should be visible');
+      expect(!pn().controller.inputEnabled, 'controls must be off before answering');
+      click(buttonByText('Doubles'));
+      expect($('predict-feedback').textContent.startsWith('Exactly'), 'feedback for the right answer');
+      click($('predict-go'));
+      expect(pn().controller.inputEnabled, 'controls on after "Try it"');
+    });
+
+    step('arrow keys raise and lower V_R', async () => {
+      for (let i = 0; i < 6; i++) key('ArrowRight', true);
+      await wait(800);
+      // 6 × 0.05 = 0.3 of the spread. W grows linearly with spread, V_R with W², so
+      // V_R = 0.714 × ((0.43 + 0.3 × 1.235) / 0.43)² − 0.714 ≈ 1.76 V.
+      const up = pn().reading().VR;
+      expect(Math.abs(up - 1.76) < 0.05, `V_R after 6 × Shift+→ is ${up}, expected ≈ 1.76 V`);
+      for (let i = 0; i < 3; i++) key('ArrowLeft', true);
+      await wait(800);
+      expect(pn().reading().VR < up, 'V_R should drop with ←');
+    });
+
+    step('ghost challenge: 4× (V_bi + V_R) doubles W, and the page says so', async () => {
+      const c = pn().controller;
+      c.target = c.spreadFor(3 * pn().reading().Vbi);
+      await until(() => $('hint').textContent.includes('doubled'), 10000, 'success message');
+    });
+
+    step('chapter 4: the ρ(x) and E(x) graphs fade in under the bar', async () => {
+      click($('story-next'));
+      const label = [...doc().querySelectorAll('.scene-label')].find((l) => l.textContent === '|E(x)|');
+      await until(() => Number(label.style.opacity) > 0.8, 6000, '|E(x)| label to appear');
+    });
+
+    step('chapter 5: reaching E_crit triggers the avalanche; Reset recovers', async () => {
+      click($('story-next'));
+      await wait(300);
+      pn().controller.target = 1;
+      await until(() => pn().state.breakdown, 8000, 'breakdown');
+      expect(Math.abs(pn().reading().Emax / 4e5 - 1) < 0.005, `E_max at breakdown = ${pn().reading().Emax}`);
+      expect($('hud').dataset.level === 'critical', 'HUD should mark E_max as critical');
+      expect(!pn().controller.inputEnabled, 'input frozen during breakdown');
+      await until(() => !$('breakdown').hidden, 4000, 'breakdown card');
+      click($('breakdown-reset'));
+      await until(() => !pn().state.breakdown && pn().controller.target === 0, 3000, 'reset');
+    });
+
+    step('lab: p⁺n puts > 99 % of W into the n-side and lowers V_BR to ≈ 51 V', async () => {
+      click($('story-next')); // "Open the lab"
+      await until(() => pn().state.mode === 'lab', 3000, 'lab mode');
+      click(buttonByText('p⁺n'));
+      pn().controller.target = 0.5;
+      await wait(800);
+      const r = pn().reading();
+      expect(r.xn / r.W > 0.99, `x_n / W = ${r.xn / r.W}`);
+      expect(Math.abs(pn().controller.vMax - 51.4) < 0.5, `range max = ${pn().controller.vMax}`);
+      click(buttonByText('Symmetric'));
+    });
+
+    step('physics panel: material, temperature and doping change the physics and the 3D model', async () => {
+      if (!$('physics').classList.contains('open')) key('g');
+      expect($('physics').classList.contains('open'), 'panel should be open');
+      click(doc().querySelector('[data-material="Ge"]'));
+      await wait(200); // physics and panel refresh on the next frame
+      expect(pn().reading().Ecrit === 2e5, `E_crit after Ge = ${pn().reading().Ecrit}`);
+      expect($('d-eg').textContent === '0.663 eV', `E_g shown: ${$('d-eg').textContent}`);
+      click(doc().querySelector('[data-temp="1"]'));
+      expect(pn().junction.T === 310, `T = ${pn().junction.T}`);
+      await wait(200);
+      const before = pn().reading().Vbi;
+      click(doc().querySelector('[data-dope="NA"][data-step="1"]'));
+      await wait(200);
+      expect(pn().junction.NA === 3e16 && pn().reading().Vbi > before, 'raising N_A raises V_bi');
+      click($('params-reset'));
+      expect(pn().junction.material === 'Si' && pn().junction.T === 300 && pn().junction.NA === 1e16, 'reset to Si · 300 K · 10¹⁶');
+    });
+
+    step('typing V_R = 12.5 V sets exactly that voltage', async () => {
+      const input = $('param-vr');
+      input.focus();
+      input.value = '12.5';
+      input.dispatchEvent(new (win().Event)('change'));
+      await until(() => Math.abs(pn().reading().VR - 12.5) < 0.01, 3000, 'V_R to reach 12.5 V');
+    });
+
+    step('graphs: bands, ρ(x), E(x) and V(x) all draw, each with its explanation', async () => {
+      const captions = new Set();
+      for (const kind of ['bands', 'rho', 'field', 'potential']) {
+        click(doc().querySelector(`[data-graph="${kind}"]`));
+        await wait(250);
+        const canvas = $('graph');
+        const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+        let drawn = 0;
+        for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 0) drawn++;
+        expect(drawn > 2000, `${kind} graph looks empty (${drawn} pixels)`);
+        captions.add($('graph-caption').textContent);
+      }
+      expect(captions.size === 4, 'each graph has its own caption');
+    });
+
+    step('click-to-explain: clicking the bar opens a "What is this?" card', async () => {
+      const V = pn().stage.camera.position.constructor;
+      const p = pn().stage.project(new V(-4, 0, 0.71));
+      const canvas = $('scene');
+      for (const type of ['pointerdown', 'pointerup']) {
+        canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 8, clientX: p.x, clientY: p.y, pointerType: 'mouse', bubbles: true }));
+      }
+      expect(!$('explain').hidden, 'card should be visible');
+      const title = $('explain-title').textContent;
+      expect(['Neutral p-type region', 'Hole: a free positive carrier'].includes(title), `card title: ${title}`);
+      $('explain-close').click();
+    });
+
+    step('rotate the model by dragging, then "Reset view" brings the shot back', async () => {
+      const canvas = $('scene');
+      click($('reset-view'));
+      await wait(2600); // start from the chapter's shot, at rest
+      const start = pn().stage.camera.position.clone();
+      const x0 = canvas.clientWidth * 0.55;
+      const y0 = 90; // empty space near the top
+      const fire = (type, x, buttons) =>
+        canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 11, clientX: x, clientY: y0, pointerType: 'mouse', button: 0, buttons, bubbles: true, isPrimary: true }));
+      fire('pointerdown', x0, 1);
+      for (let i = 1; i <= 8; i++) fire('pointermove', x0 + i * 20, 1);
+      fire('pointerup', x0 + 160, 0);
+      await wait(600);
+      expect(pn().stage.viewMoved(), 'the view should count as moved');
+      expect(pn().stage.camera.position.distanceTo(start) > 2, 'the camera should have turned');
+      click($('reset-view'));
+      await wait(2600);
+      expect(!pn().stage.viewMoved(), 'reset view');
+      expect(pn().stage.camera.position.distanceTo(start) < 0.5, 'back to the chapter’s shot');
+    });
+
+    step('help dialog opens and closes', async () => {
+      click($('help-toggle'));
+      expect($('help').open, 'dialog open');
+      $('help').close();
+      expect(!$('help').open, 'dialog closed');
+    });
+
+    step('phone size: no sideways scroll, text above the numbers', async () => {
+      frame.width = 375;
+      frame.height = 812;
+      await wait(1200);
+      expect(doc().documentElement.scrollWidth <= 375, `page is ${doc().documentElement.scrollWidth}px wide`);
+      const panel = $('lab').getBoundingClientRect();
+      const hud = $('hud').getBoundingClientRect();
+      expect(panel.bottom < hud.top, `panel bottom ${panel.bottom} overlaps HUD top ${hud.top}`);
+      frame.width = 1280;
+      frame.height = 800;
+      await wait(500);
+    });
+
+    step('camera: the tracker starts and keeps detecting', async () => {
+      click($('hands-toggle'));
+      await until(() => $('hands-toggle').getAttribute('aria-pressed') === 'true', 90000, 'camera + model');
+      const times = new Set();
+      const start = performance.now();
+      while (performance.now() - start < 3000) {
+        const f = pn().controller.lastFrame;
+        if (f) times.add(f.time);
+        await wait(20);
+      }
+      expect(times.size >= 10, `only ${times.size} detections in 3 s`);
+      $('calibration-skip').click();
+    }, { when: params.has('camera') });
+
+    step('camera: hands in the test video are found and drive V_R', async () => {
+      await until(() => pn().controller.lastFrame?.hands.length === 2, 30000, 'two hands');
+      let min = Infinity, max = -Infinity, locked = false;
+      const start = performance.now();
+      while (performance.now() - start < 12000) {
+        const v = pn().reading().VR;
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+        locked ||= pn().controller.locked;
+        await wait(50);
+      }
+      expect(max - min > 1, `V_R only moved between ${min.toFixed(2)} and ${max.toFixed(2)} V`);
+      if (!locked) throw new Error('V_R moved, but no fist lock was seen (does the video contain a fist?)');
+    }, { when: params.has('hands') });
+
+    step('no runtime errors were thrown', async () => {
+      expect(errors.length === 0, errors.join(' | '));
+    });
+
+    // ---------------------------------------------------- mystery.html (its own page)
+
+    step('mystery page: linked from the main page, opens on its start screen', async () => {
+      const links = doc().querySelectorAll('a[href="mystery.html"]');
+      expect(links.length >= 2, `expected 2 links to mystery.html, found ${links.length}`);
+      frame.src = '../mystery.html';
+      await until(() => win().location.pathname.endsWith('/mystery.html') && pn()?.measure, 30000, 'mystery.html to load');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      $('scene').setPointerCapture = () => {};
+      $('scene').releasePointerCapture = () => {};
+      expect(!$('intro').hidden && pn().state.mode === 'intro', 'start screen visible');
+      expect(doc().querySelector('a.brand').getAttribute('href') === 'index.html', 'link back to the main page');
+    });
+
+    step('mystery page: sweeping the sealed diode gives a straight 1/C² line that recovers V_bi and N', async () => {
+      click($('start'));
+      await until(() => pn().state.mode === 'measure' && !$('measure').hidden, 3000, 'measure screen');
+      const truth = {
+        sym16: { Vbi: 0.714, N: 5e15 },
+        pn16: { Vbi: 0.833, N: 9.9e15 },
+        sym17: { Vbi: 0.833, N: 5e16 },
+        pn15: { Vbi: 0.774, N: 9.99e14 },
+      }[pn().measure.secret()];
+      await until(() => $('hud').textContent.includes('pF'), 3000, 'the meter (pF) in the HUD');
+      // Sweep 0 → 8 V like a visitor would (the meter samples every 0.2 V).
+      for (let i = 0; i <= 40; i++) {
+        pn().controller.setVoltage(i * 0.2, { instant: true });
+        await wait(60);
+      }
+      await until(() => Number($('fit-count').textContent) >= 30, 5000, '30 readings');
+      const { Vbi, Neff } = pn().measure.result();
+      expect(Math.abs(Vbi - truth.Vbi) < 0.15, `fitted V_bi ${Vbi} vs true ${truth.Vbi}`);
+      expect(Math.abs(Neff / truth.N - 1) < 0.08, `fitted N ${Neff} vs true ${truth.N}`);
+    });
+
+    step('mystery page: right answer scores a point, the package opens, a new diode is sealed', async () => {
+      const id = pn().measure.secret();
+      doc().querySelectorAll('#mystery-options .option')[['sym16', 'pn16', 'sym17', 'pn15'].indexOf(id)].click();
+      expect($('mystery-feedback').textContent.startsWith('Correct'), `feedback: ${$('mystery-feedback').textContent}`);
+      expect($('mystery-score').textContent === '1 identified · 1 on the first guess', `score: ${$('mystery-score').textContent}`);
+      click($('mystery-open'));
+      expect($('mystery-feedback').textContent.startsWith('Inside:'), 'reveal text');
+      click($('mystery-new'));
+      expect(pn().measure.secret() !== id, 'a different diode is sealed');
+      await wait(200); // the panel refreshes on the next frame
+      expect(Number($('fit-count').textContent) <= 1, 'points cleared for the new diode');
+    });
+
+    step('mystery page: no runtime errors were thrown', async () => {
+      expect(errors.length === 0, errors.join(' | '));
+    });
+
+    // ---------------------------------------------------- bench/ (Bench 58, a separate project)
+
+    const bench = () => win().__bench;
+    const keyOn = (el, k, shiftKey = false) => el.dispatchEvent(new (win().KeyboardEvent)('keydown', { key: k, shiftKey, bubbles: true }));
+    async function setVolts(V) {
+      bench().knobs.voltage.set(Math.sqrt(V / 120));
+      bench().state.target = V;
+      await until(() => Math.abs(bench().state.applied - V) < 0.01, 5000, `supply to reach ${V} V`);
+      await wait(100);
+    }
+
+    step('bench: loads on its own, knob turns with the keyboard, the supply ramps', async () => {
+      frame.src = '../bench/';
+      await until(() => win().location.pathname.endsWith('/bench/') && bench(), 30000, 'bench to load');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      const knob = $('knob-voltage');
+      for (let i = 0; i < 10; i++) keyOn(knob, 'ArrowRight', true); // coarse steps
+      expect(bench().state.target > 1, `knob target ${bench().state.target} V`);
+      await until(() => Math.abs(bench().state.applied - bench().state.target) < 0.01, 5000, 'supply ramp');
+      const digits = [...doc().querySelectorAll('.tube .digit')].map((d) => d.textContent).join('');
+      expect(digits.length === 4, `nixies show ${digits}`);
+    });
+
+    step('bench: instruments agree with the physics at 10 V (W 1.665 µm, E_max 1.29·10⁵, C 0.622 pF)', async () => {
+      await setVolts(10);
+      const r = bench().reading();
+      expect(Math.abs(r.W * 1e4 - 1.665) < 0.005, `W = ${r.W * 1e4}`);
+      const text = doc().querySelector('.meters').textContent;
+      expect(text.includes('1.665 µm') && text.includes('1.29·10⁵ V/cm') && text.includes('0.622 pF'), `meters read: ${text.replace(/\s+/g, ' ').slice(0, 160)}`);
+    });
+
+    step('bench: five recorded readings make W² a straight line (experiment stamped)', async () => {
+      click($('clear-log'));
+      for (const V of [0, 2, 5, 8, 12]) {
+        await setVolts(V);
+        click($('record'));
+      }
+      await wait(200);
+      expect(doc().querySelectorAll('#log-body tr').length === 5, 'five rows logged');
+      expect($('log-note').textContent.includes('straight line'), `note: ${$('log-note').textContent}`);
+      expect(bench().notebook.completed().includes('line'), 'experiment "line" verified');
+    });
+
+    step('bench: doubling W, a p⁺n specimen and the fuse complete the other experiments', async () => {
+      await setVolts(3 * bench().reading().Vbi);
+      await wait(200);
+      expect(bench().notebook.completed().includes('double'), 'experiment "double" verified');
+      const na = $('knob-na');
+      for (let i = 0; i < 4; i++) keyOn(na, 'ArrowRight'); // 10¹⁶ → 10¹⁸
+      expect(bench().junction.NA === 1e18, `N_A = ${bench().junction.NA}`);
+      await setVolts(5);
+      await wait(200);
+      expect(bench().notebook.completed().includes('pn'), 'experiment "pn" verified');
+      bench().knobs.voltage.set(1);
+      bench().state.target = 120; // p⁺n breaks down near 51 V
+      await until(() => bench().state.blown, 6000, 'the fuse to blow');
+      expect([...doc().querySelectorAll('.tube .digit')].map((d) => d.textContent).join('').startsWith('OVL'), 'nixies read OVL');
+      expect(!$('replace-fuse').hidden, 'replace-fuse card shown');
+      await wait(200);
+      expect(bench().notebook.completed().includes('fuse'), 'experiment "fuse" verified');
+      click($('replace-fuse'));
+      expect(!bench().state.blown && bench().state.target === 0, 'fuse replaced, knob back at 0');
+    });
+
+    step('bench: a germanium chip changes the material constants', async () => {
+      click(doc().querySelector('[data-material="Ge"]'));
+      expect(bench().junction.material === 'Ge', 'material is Ge');
+      expect($('constants').textContent.includes('0.663 eV'), `constants: ${$('constants').textContent}`);
+    });
+
+    step('bench: no runtime errors were thrown', async () => {
+      expect(errors.length === 0, errors.join(' | '));
+    });
+
+    // ---------------------------------------------------- emergent/ (live solver + neural network)
+
+    const em = () => win().__emergent;
+
+    step('emergent: loads, the worker solves Poisson and the particles appear', async () => {
+      frame.src = '../emergent/';
+      await until(() => win().location.pathname.endsWith('/emergent/') && em(), 30000, 'emergent to load');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      await until(() => em().state.solution, 20000, 'the first solution from the worker');
+      expect($('solver-pill').textContent.startsWith('Solved'), `pill: ${$('solver-pill').textContent}`);
+      expect(em().scene.particleCount() > 20000, `particles: ${em().scene.particleCount()}`);
+    });
+
+    step('emergent: the solver agrees with the textbook at 10 V (within 1 %)', async () => {
+      em().setVoltage(10);
+      await until(() => em().state.solution?.VR === 10, 10000, 'solution at 10 V');
+      const s = em().state.solution;
+      expect(Math.abs(s.W * 1e4 / 1.665 - 1) < 0.01, `solver W = ${s.W * 1e4} µm`);
+      expect(s.residual < 1e-8, `residual ${s.residual}`);
+    });
+
+    step('emergent: the neural network trains in the browser and predicts within 5 %', async () => {
+      await until(() => $('nn-status').textContent.startsWith('Trained'), 90000, 'training to finish');
+      const text = $('cmp-net-w').textContent; // e.g. "1.66 µm"
+      const net = parseFloat(text);
+      const solver = em().state.solution.W * 1e4;
+      expect(Math.abs(net / solver - 1) < 0.05, `network ${net} µm vs solver ${solver} µm`);
+    });
+
+    step('emergent: switching to germanium re-solves', async () => {
+      click(doc().querySelector('[data-material="Ge"]'));
+      await until(() => em().state.solution?.junction.material === 'Ge', 10000, 'a germanium solution');
+      expect(em().state.solution.residual < 1e-8, 'converged');
+    });
+
+    step('emergent: no runtime errors were thrown', async () => {
+      expect(errors.length === 0, errors.join(' | '));
+    });
+
+    // ---------------------------------------------------- xr/ (Depletion: 3D website + AR hand-off)
+
+    const xr = () => win().__xr;
+
+    step('depletion: loads, renders frames, readouts match the physics at 0 V (W 430 nm)', async () => {
+      frame.width = 1280;
+      frame.height = 800;
+      frame.src = '../xr/?nointro';
+      await until(() => win().location.pathname.endsWith('/xr/') && xr()?.stage.frames > 10, 30000, 'xr to render');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      $('scene').setPointerCapture = () => {};
+      $('scene').releasePointerCapture = () => {};
+      await until(() => $('r-w').textContent === '430 nm', 5000, 'W readout');
+      expect($('r-vbi').textContent === '0.714 V', `V_bi ${$('r-vbi').textContent}`);
+    });
+
+    step('depletion: 10 V gives W = 1.665 µm; ions light up as the region widens', async () => {
+      const before = xr().model.counts().glowingIons;
+      const vbr = xr().model.reading.VBR; // the slider maps 0…1 to V_R = slider² · V_BR
+      xr().state.slider = Math.sqrt(10 / vbr);
+      xr().apply({ instant: true });
+      await until(() => $('r-w').textContent === '1.665 µm', 5000, 'W = 1.665 µm');
+      await wait(600);
+      const after = xr().model.counts().glowingIons;
+      expect(after > before * 2, `glowing ions ${before} → ${after}`);
+      const c = xr().model.counts();
+      expect(c.visibleHoles < c.holes && c.visibleElectrons < c.electrons, 'carriers withdrew from the depletion region');
+    });
+
+    step('depletion: the Breakdown button drives E_max to E_crit and starts the avalanche', async () => {
+      click($('vr-break'));
+      await until(() => xr().model.reading?.breakdown, 6000, 'breakdown');
+      await until(() => xr().model.counts().sparks > 5, 3000, 'avalanche sparks');
+      expect($('r-ratio').textContent.startsWith('Avalanche'), `ratio text: ${$('r-ratio').textContent}`);
+      click($('vr-zero'));
+    });
+
+    step('depletion: p⁺n puts > 98 % of W into the n-side', async () => {
+      click(doc().querySelector('[data-doping="pn"]'));
+      xr().apply({ instant: true });
+      await wait(200);
+      const r = xr().model.reading;
+      expect(r.xn / r.W > 0.98, `x_n / W = ${r.xn / r.W}`);
+      click(doc().querySelector('[data-doping="symmetric"]'));
+    });
+
+    step('depletion: all four plots and all four themes switch', async () => {
+      for (const kind of ['field', 'potential', 'charge', 'bands']) {
+        click(doc().querySelector(`[data-plot="${kind}"]`));
+        expect(xr().model.state.plotKind === kind, `plot ${kind}`);
+      }
+      for (const theme of ['cleanroom', 'blueprint', 'sunset', 'nebula']) {
+        click(doc().querySelector(`.swatch[data-theme="${theme}"]`));
+        await wait(150);
+        expect(doc().documentElement.dataset.theme === theme && xr().stage.theme.name.toLowerCase() === theme, `theme ${theme}`);
+      }
+    });
+
+    step('depletion: clicking the p-side opens a "what is this" card', async () => {
+      xr().stage.jumpTo('front');
+      await wait(400);
+      const V = xr().stage.camera.position.constructor;
+      const p = xr().stage.project(new V(-0.25, 0.1, 0.141));
+      for (const type of ['pointerdown', 'pointerup']) {
+        $('scene').dispatchEvent(new (win().PointerEvent)(type, { pointerId: 21, clientX: p.x, clientY: p.y, pointerType: 'mouse', bubbles: true }));
+      }
+      expect(!$('explain').hidden, 'explain card visible');
+      const title = $('explain-title').textContent;
+      expect(['p-type silicon', 'Hole (p-side)', 'Acceptor ion (−)'].includes(title), `title: ${title}`);
+      click($('explain-close'));
+    });
+
+    step('depletion: the guided tour runs through all five steps', async () => {
+      click($('tour-start'));
+      for (let i = 0; i < 4; i++) click($('tour-next'));
+      expect($('tour-title').textContent === 'Breakdown', `last step: ${$('tour-title').textContent}`);
+      click($('tour-next')); // Finish
+      expect($('tour').hidden, 'tour closed');
+    });
+
+    step('depletion: "See it in your room" shows a QR code for ar.html and the card', async () => {
+      click($('ar-open'));
+      expect($('ar-dialog').open, 'dialog open');
+      await until(() => {
+        const px = $('qr').getContext('2d').getImageData(0, 0, 232, 232).data;
+        let dark = 0;
+        for (let i = 0; i < px.length; i += 4) if (px[i] < 50) dark++;
+        return dark > 5000;
+      }, 8000, 'QR code drawn');
+      expect($('ar-url').textContent.endsWith('/xr/ar.html'), `url ${$('ar-url').textContent}`);
+      expect($('ar-card-img').naturalWidth === 1600, 'card image loaded');
+      click($('ar-close'));
+    });
+
+    step('depletion: phone size has no sideways scroll; the AR page and card page load', async () => {
+      frame.width = 375;
+      frame.height = 812;
+      await wait(800);
+      expect(doc().documentElement.scrollWidth <= 375, `page is ${doc().documentElement.scrollWidth}px wide`);
+      frame.width = 1280;
+      frame.height = 800;
+      expect(errors.length === 0, errors.join(' | '));
+      frame.src = '../xr/ar.html';
+      await until(() => win().location.pathname.endsWith('/ar.html') && win().__ar, 30000, 'ar.html');
+      expect(!$('ar-start').hidden && !$('start-card').hidden, 'start screen with Card mode');
+      frame.src = '../xr/card.html';
+      await until(() => win().location.pathname.endsWith('/card.html') && $('card')?.naturalWidth === 1600, 15000, 'card.html');
+    });
+
+    // ----------------------------------------------------------------- run
+
+    const results = [];
+    const log = document.getElementById('log');
+    for (const { name, fn } of steps) {
+      const li = document.createElement('li');
+      li.textContent = name;
+      log.appendChild(li);
+      try {
+        await fn();
+        results.push({ group: 'Smoke', name, pass: true });
+        li.className = 'pass';
+      } catch (err) {
+        results.push({ group: 'Smoke', name, pass: false, error: err.message });
+        li.className = 'fail';
+        li.insertAdjacentHTML('beforeend', '<small></small>');
+        li.lastChild.textContent = err.message;
+      }
+    }
+    document.title = results.every((r) => r.pass) ? 'PASSED' : 'FAILED';
+    if (params.has('report')) {
+      await fetch('/__results', { method: 'POST', body: JSON.stringify(results) });
+    }
+  </script>
+</body>
+</html>
