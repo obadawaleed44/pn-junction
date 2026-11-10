@@ -128,7 +128,7 @@ export function createJunction({ quality = 'high' } = {}) {
   const fieldMaterial = new THREE.ShaderMaterial({
     uniforms: {
       uJ: { value: 0.5 }, uPeak: { value: 0 }, uTime: { value: 0 }, uWidth: { value: 0.1 },
-      uOpacity: { value: 0 }, uGain: { value: 1 }, uLow: { value: COLORS.fieldLow.clone() }, uHigh: { value: COLORS.fieldHigh.clone() },
+      uOpacity: { value: 0 }, uGain: { value: 1 }, uShape: { value: 0 }, uLow: { value: COLORS.fieldLow.clone() }, uHigh: { value: COLORS.fieldHigh.clone() },
     },
     vertexShader: /* glsl */ `
       varying float vX;
@@ -142,13 +142,15 @@ export function createJunction({ quality = 'high' } = {}) {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uJ, uPeak, uTime, uWidth, uOpacity, uGain;
+      uniform float uJ, uPeak, uTime, uWidth, uOpacity, uGain, uShape;
       uniform vec3 uLow, uHigh;
       varying float vX;
       varying vec3 vN;
       varying vec3 vV;
       void main() {
+        // abrupt junction: a triangle; linearly graded (uShape = 1): a parabola
         float e = vX < uJ ? vX / max(uJ, 1e-4) : (1.0 - vX) / max(1.0 - uJ, 1e-4);
+        e = mix(e, 4.0 * vX * (1.0 - vX), uShape);
         e = clamp(e, 0.0, 1.0) * uPeak;
         // bands flowing towards −x: the direction of E (n → p)
         float flow = 0.5 + 0.5 * sin(vX * uWidth * 160.0 + uTime * (2.0 + 9.0 * uPeak));
@@ -407,6 +409,13 @@ export function createJunction({ quality = 'high' } = {}) {
     const junctionChanged = next.junction && JSON.stringify(next.junction) !== JSON.stringify(state.junction);
     if (next.junction) state.junction = { ...next.junction };
     if (next.VR !== undefined) state.VR = next.VR;
+    // Linearly graded junction: `layoutFn(VR)` supplies the geometry (same fields as
+    // model.js layout()), doping density then grows with |x| and the field is a parabola.
+    if (next.graded !== undefined) {
+      state.graded = !!next.graded;
+      state.layoutFn = next.layoutFn ?? null;
+      fieldMaterial.uniforms.uShape.value = state.graded ? 1 : 0;
+    }
     if (next.half !== undefined) {
       state.half = next.half; // zoom: physical half-width shown by the slab (cm); null = fit breakdown
       state.plotDirty = true;
@@ -449,7 +458,9 @@ export function createJunction({ quality = 'high' } = {}) {
     const b = Math.sqrt(state.VR + 0.7);
     state.shownVR = Math.max(0, smooth(a, b, 7, dt) ** 2 - 0.7);
     if (Math.abs(state.shownVR - state.VR) < 1e-4) state.shownVR = state.VR;
-    const L = (state.L = layout(state.junction, state.shownVR, state.half ?? undefined));
+    const L = (state.L = state.layoutFn ? state.layoutFn(state.shownVR) : layout(state.junction, state.shownVR, state.half ?? undefined));
+    // graded doping: fewer dopants (and carriers) near the junction, more further out
+    const dense = (x, i) => !state.graded || hash(i) < Math.min(1, Math.abs(x) / (0.55 * INNER_HALF));
 
     // Formation: halves slide together; the depletion region appears as they touch.
     const f = state.formation;
@@ -470,7 +481,7 @@ export function createJunction({ quality = 'high' } = {}) {
         const g = glow[i];
         const k = time * 9 + i * 1.7;
         v.set(x + Math.sin(k) * shake, y + Math.sin(k * 1.31) * shake, z + Math.sin(k * 0.77) * shake);
-        s.setScalar(0.75 + 0.45 * g);
+        s.setScalar(dense(x, i) ? 0.75 + 0.45 * g : 0);
         mesh.setMatrixAt(i, m.compose(v, q.identity(), s));
         if (look.light) color.copy(LIGHT.ionDim).lerp(LIGHT.ion, g);
         else color.copy(COLORS.ion).multiplyScalar(0.16 + 1.45 * g);
@@ -488,7 +499,7 @@ export function createJunction({ quality = 'high' } = {}) {
     const updateCarriers = (mesh, sites, presence, outside, sign) => {
       for (let i = 0; i < sites.length; i++) {
         const [x, y, z, phase] = sites[i];
-        presence[i] = smooth(presence[i], outside(x) ? 1 : 0, 5, dt);
+        presence[i] = smooth(presence[i], outside(x) && dense(x, i + 7919) ? 1 : 0, 5, dt);
         const p = presence[i];
         const k = time * 1.6 + phase;
         v.set(
@@ -521,7 +532,7 @@ export function createJunction({ quality = 'high' } = {}) {
     for (let c = 0; c < columns; c++) {
       const t = (c + 0.5) / columns;
       const x = Xp + t * width;
-      const e = (x < 0 ? 1 - x / Xp : 1 - x / Xn) * Math.min(1, L.fieldRatio);
+      const e = (state.graded ? 4 * t * (1 - t) : x < 0 ? 1 - x / Xp : 1 - x / Xn) * Math.min(1, L.fieldRatio);
       const len = Math.min(0.9 * (width / columns) / 0.03, 0.35 + 1.5 * e);
       for (const [fy, fz] of ARROW_ROWS) {
         v.set(x, H * fy, D * fz);
@@ -729,6 +740,12 @@ export function createJunction({ quality = 'high' } = {}) {
 }
 
 // --------------------------------------------------------------------- helpers
+
+/** Stable pseudo-random number in [0, 1) for an index. */
+function hash(i) {
+  const s = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return s - Math.floor(s);
+}
 
 function isShown(object) {
   for (let o = object; o; o = o.parent) if (!o.visible) return false;

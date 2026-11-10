@@ -202,8 +202,8 @@
           <input id="gvr" type="range" min="0" max="10" step="0.01" value="2" />
           <output id="gvr-out">2.00 V</output>
         </div>
-        <figure class="figure"><svg id="fig-g-bar" viewBox="0 0 800 200" role="img" aria-label="Graded junction"></svg>
-          <svg id="fig-g-plots" viewBox="0 0 800 420" role="img" aria-label="Charge, field and potential of the selected junction"></svg></figure>
+        <div class="stage3d" id="stage-g" role="img" aria-label="3D model of the selected junction: abrupt, or linearly graded with doping that grows away from the junction"></div>
+        <figure class="figure"><svg id="fig-g-plots" viewBox="0 0 800 420" role="img" aria-label="Charge, field and potential of the selected junction"></svg></figure>
         <figure class="figure"><svg id="fig-loglog" viewBox="0 0 800 300" role="img" aria-label="Depletion width against total voltage on log–log axes: slope one half for abrupt, one third for graded"></svg></figure>
       </div>
     </section>
@@ -224,6 +224,7 @@
           <input id="bvr" type="range" min="0" max="104" step="0.1" value="40" />
           <output id="bvr-out">40.0 V</output>
         </div>
+        <div class="stage3d" id="stage-bd" role="img" aria-label="3D model of the junction near breakdown: avalanche sparks in the strongest field, current pulses in the wires"></div>
         <figure class="figure"><svg id="fig-bd" viewBox="0 0 800 320" role="img" aria-label="Field profile against the critical field"></svg></figure>
         <dl class="readouts">
           <div><dt>E<sub>max</sub> / E<sub>crit</sub></dt><dd id="b-ratio"></dd></div>

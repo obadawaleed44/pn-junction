@@ -5,12 +5,13 @@ import {
   criticalField, permittivity, Q,
 } from '../../js/physics.js';
 import {
-  JUNCTION, P_PLUS_N, GRADED, gradedBuiltIn, gradedWidth, gradedFieldAt,
+  JUNCTION, P_PLUS_N, GRADED, gradedBuiltIn, gradedWidth, gradedFieldAt, gradedMaxField, gradedBreakdown,
   gradedChargeAt, gradedPotentialAt, depletionWidth, breakdownVoltage, operatingPoint, formatSI,
 } from './device.js';
 import { BarFigure, StackPlot, Chart, um } from './figures.js';
 import { createLab } from './lab.js';
 import { createJunctionStage } from './scenes.js';
+import { INNER_HALF, scaleBar } from '../../xr/js/model.js';
 
 const $ = (id) => document.getElementById(id);
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -145,7 +146,21 @@ const lab = createLab({ guess: () => guess });
 
 // ------------------------------------------------------------------ 06 graded
 const G_HALF = 1.6e-4;
-const gBar = new BarFigure($('fig-g-bar'), G_HALF, { top: 40, height: 100, carriers: 70 });
+const gStage = createJunctionStage($('stage-g'), G_HALF, { size: 1.15, battery: true, junction: JUNCTION });
+/** The graded junction's geometry, in the same shape as the 3D model's own layout(). */
+function gradedLayout(VR) {
+  const W = gradedWidth(GRADED, VR);
+  const scale = INNER_HALF / G_HALF;
+  const Emax = gradedMaxField(GRADED, VR);
+  const Ecrit = criticalField(GRADED);
+  const VBRg = gradedBreakdown(GRADED);
+  return {
+    VR, Vbi: gradedBuiltIn(GRADED), W, xp: W / 2, xn: W / 2, Emax, Ecrit, VBR: VBRg,
+    scale, half: G_HALF, Xp: (-W / 2) * scale, Xn: (W / 2) * scale, fieldRatio: Emax / Ecrit,
+    breakdown: VR >= VBRg * 0.995, multiplication: 1 / (1 - Math.min(0.999999, VR / VBRg) ** 4),
+    capacitancePerArea: permittivity(GRADED) / W, scaleBar: scaleBar(scale),
+  };
+}
 const gPlots = new StackPlot($('fig-g-plots'), G_HALF, [
   { key: 'rho', label: 'ρ(x)', unit: 'q·10¹⁶ cm⁻³', range: [-1.2, 1.2], color: css('--ion'), fill: 'rgba(183,121,31,0.14)' },
   { key: 'E', label: '|E(x)|', unit: '10⁵ V/cm', range: [0, 1.6], color: css('--accent'), fill: 'rgba(47,91,234,0.12)' },
@@ -158,7 +173,7 @@ function drawGraded() {
   fillSlider($('gvr'));
   if (gType === 'graded') {
     const W = gradedWidth(GRADED, VR);
-    gBar.set({ xp: W / 2, xn: W / 2, bias: true, graded: true, field: (x) => gradedFieldAt(GRADED, VR, x) / 1.5e5, label: `W = ${um(W)}` });
+    gStage?.model.setState({ VR, graded: true, layoutFn: gradedLayout });
     gPlots.set({
       curves: {
         rho: (x) => gradedChargeAt(GRADED, VR, x) / Q / 1e16,
@@ -169,7 +184,7 @@ function drawGraded() {
     });
   } else {
     const edges = depletionEdges(JUNCTION, VR);
-    gBar.set({ ...edges, bias: true, graded: false, field: (x) => fieldAt(JUNCTION, VR, x) / 1.5e5, label: '' });
+    gStage?.model.setState({ VR, graded: false });
     gPlots.set({ curves: abruptCurves(JUNCTION, VR), ...edges });
   }
   drawLogLog(VR);
@@ -210,12 +225,15 @@ const bd = new StackPlot($('fig-bd'), 4.5e-4, [
   { key: 'E', label: '|E(x)|', unit: '10⁵ V/cm', range: [0, 4.6], color: css('--accent'), fill: 'rgba(47,91,234,0.12)', guide: { value: ECRIT / 1e5, label: 'E_crit = 4·10⁵ V/cm' } },
 ], { panelHeight: 250 });
 $('bvr').max = Math.ceil(VBR + 1);
+// 3D: the slab's default window fits the depletion region at breakdown; sparks show the avalanche.
+const bdStage = createJunctionStage($('stage-bd'), undefined, { size: 1.15, battery: true, junction: JUNCTION });
 function drawBreakdown() {
   const set = Number($('bvr').value);
   const op = operatingPoint(JUNCTION, -set);
   const VR = -op.V;
   const ratio = maxField(JUNCTION, VR) / ECRIT;
   bd.set({ curves: { E: (x) => fieldAt(JUNCTION, VR, x) / 1e5 }, ...depletionEdges(JUNCTION, VR) });
+  bdStage?.model.setState({ VR });
   $('bvr-out').textContent = `${VR.toFixed(1)} V`;
   $('b-ratio').textContent = `${Math.min(100, ratio * 100).toFixed(1)} %`;
   $('b-ratio').classList.toggle('hot', ratio > 0.97);
