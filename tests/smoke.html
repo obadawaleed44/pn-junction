@@ -670,6 +670,23 @@
       expect(errors.length === 0, errors.join(' | '));
     });
 
+    step('AR page: iPhone table-mode files are real USDZ (zip, .usda first, 64-byte aligned); buttons hidden off-iPhone', async () => {
+      for (const name of ['junction-breathing.usdz', 'junction-trio.usdz']) {
+        const buf = new Uint8Array(await (await fetch(`../xr/assets/${name}`)).arrayBuffer());
+        expect(buf[0] === 0x50 && buf[1] === 0x4b, `${name} is a zip`);
+        const nameLen = buf[26] | (buf[27] << 8);
+        const extraLen = buf[28] | (buf[29] << 8);
+        const first = new TextDecoder().decode(buf.slice(30, 30 + nameLen));
+        expect(first.endsWith('.usda'), `${name}: first file ${first}`);
+        expect((30 + nameLen + extraLen) % 64 === 0, `${name}: data not 64-byte aligned`);
+        expect(buf[8] === 0 && buf[9] === 0, `${name}: must be stored, not compressed`);
+      }
+      frame.src = '../xr/ar.html';
+      await until(() => win().location.pathname.endsWith('/ar.html') && win().__ar, 30000, 'ar.html');
+      const buttons = [...doc().querySelectorAll('.ios-only')];
+      expect(buttons.length === 2 && buttons.every((b) => b.hidden), 'iPhone buttons exist and are hidden in Edge');
+    });
+
     // ---------------------------------------------------- guide/ fly-through (the presentation)
 
     const pr = () => win().__present;

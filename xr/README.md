@@ -14,6 +14,11 @@ It uses the same tested physics as the main exhibit (`../js/physics.js`).
 * **AR** (`ar.html`):
   * **Card mode**, on every phone (iPhone and Android, in the browser): point the camera at the card and the junction appears on it. The card can be shown on the laptop screen or printed. It picks "standing on the card" or "facing you" from your viewing angle, and a button switches between them.
   * **Table mode**, on Android with ARCore (WebXR): tap to place the junction on any flat surface and walk around it.
+* **On the table, iPhone** (no card): iPhone Safari has no WebXR, so on iPhone the AR page offers two models that open in Apple's **AR Quick Look**, which finds the table by itself:
+  * `assets/junction-breathing.usdz`: one junction whose depletion region opens from 0 to 50 V and closes again, on an 8-second loop;
+  * `assets/junction-trio.usdz`: three junctions side by side at 0, 10 and 50 V.
+
+  They are generated from the same physics by `python xr/tools/make_usdz.py`: plain USD meshes, UsdPreviewSurface materials and transform animation, sizes in metres (the slab is 20 cm), packed as an uncompressed, 64-byte-aligned zip. Quick Look shows a static or looping model; there is no live slider inside it.
 * **Card** (`card.html`): the printable tracking card plus a QR code.
 
 ## How the AR works

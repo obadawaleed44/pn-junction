@@ -14,3 +14,6 @@ __pycache__/
 .claude/
 .DS_Store
 Thumbs.db
+
+# Intermediate label images for the iPhone AR models (they are packed inside the .usdz files)
+xr/assets/_usdz/

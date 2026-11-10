@@ -39,6 +39,15 @@
           <span class="mode-icon table" aria-hidden="true"></span>
           <span><b>Table mode</b><small>No card: place it on any flat surface (Android, ARCore).</small></span>
         </button>
+        <!-- iPhone / iPad: Apple's AR Quick Look places these models on the table, no card -->
+        <button class="mode ios-only" data-usdz="assets/junction-breathing.usdz" type="button" hidden>
+          <span class="mode-icon table" aria-hidden="true"></span>
+          <span><b>On the table: breathing junction</b><small>No card. The depletion region opens from 0 to 50 V and closes again, on a loop.</small></span>
+        </button>
+        <button class="mode ios-only" data-usdz="assets/junction-trio.usdz" type="button" hidden>
+          <span class="mode-icon table" aria-hidden="true"></span>
+          <span><b>On the table: three junctions</b><small>No card. 0 V, 10 V and 50 V side by side: compare W.</small></span>
+        </button>
       </div>
       <p class="hint">No card? <a href="card.html">Open the card</a> on another screen or print it. The camera image stays on your phone.</p>
       <p class="warn" id="ar-error" hidden></p>

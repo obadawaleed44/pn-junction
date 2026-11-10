@@ -24,6 +24,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         ".html": "text/html",
         ".json": "application/json",
         ".wasm": "application/wasm",
+        ".usdz": "model/vnd.usdz+zip",  # iPhone AR Quick Look checks this
         ".task": "application/octet-stream",
     }
 

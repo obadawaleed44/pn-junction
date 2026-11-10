@@ -360,6 +360,21 @@ $('ar-exit').addEventListener('click', () => {
   else location.reload();
 });
 navigator.xr?.isSessionSupported('immersive-ar').then((ok) => ($('start-table').hidden = !ok)).catch(() => {});
+
+// iPhone / iPad: no WebXR, but Safari opens .usdz models in AR Quick Look, which finds the
+// table by itself (no card). Safari only does that for a link with rel="ar" whose single child
+// is an image, so each button clicks such a hidden link. Models: xr/tools/make_usdz.py.
+const quickLook = document.createElement('a').relList.supports?.('ar');
+document.querySelectorAll('.ios-only').forEach((button) => {
+  button.hidden = !quickLook;
+  button.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.rel = 'ar';
+    link.href = button.dataset.usdz;
+    link.appendChild(document.createElement('img'));
+    link.click();
+  });
+});
 document.fonts?.ready.then(() => redrawLabels(junction.group));
 if (params.get('start') === 'card') startCardMode();
 
