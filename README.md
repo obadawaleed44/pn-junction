@@ -24,6 +24,8 @@ in an avalanche.
 > * **Depletion (3D + AR)** at `xr/`: a cinematic 3D website with themes. On your phone you can put the junction on a card (any phone) or on a table (Android). See [xr/README.md](xr/README.md).
 > A zip snapshot of this exhibit is kept in `backups/`.
 
+> **Presented site (the guide):** **https://obadawaleed44.github.io/pn-junction/guide/**: question → equilibrium → ρ → E → V → reverse bias → 3D circuit lab → graded junction → breakdown → AR → recap.
+>
 > Live site: **https://obadawaleed44.github.io/pn-junction/** · 3D + AR: **https://obadawaleed44.github.io/pn-junction/xr/** (see [Deploying](#deploying-to-github-pages))
 
 ---

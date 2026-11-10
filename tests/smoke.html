@@ -557,6 +557,102 @@
       await until(() => win().location.pathname.endsWith('/card.html') && $('card')?.naturalWidth === 1600, 15000, 'card.html');
     });
 
+    // ---------------------------------------------------- guide/ (the presented site)
+
+    const gd = () => win().__guide;
+    const val = (id) => $(id).textContent;
+    const setRange = (id, v) => { $(id).value = v; $(id).dispatchEvent(new (win().Event)('input')); };
+
+    step('guide: loads, all four 3D views render, no errors', async () => {
+      frame.width = 1280;
+      frame.height = 800;
+      frame.src = '../guide/';
+      await until(() => win().location.pathname.endsWith('/guide/') && gd(), 30000, 'guide to load');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+      for (const id of ['stage-hero', 'stage-eq', 'stage-rev', 'bench']) {
+        $(id).scrollIntoView();
+        await until(() => $(id).querySelector('canvas'), 5000, `${id} canvas`);
+      }
+      await until(() => gd().lab.bench.view.frames > 5, 10000, 'the bench to render');
+    });
+
+    step('guide 04: 10 V gives W = 1.66 µm; "4× the voltage" doubles W', async () => {
+      setRange('vr', 10);
+      expect(val('r-w') === '1.66 µm', `W ${val('r-w')}`);
+      click(doc().querySelector('[data-p="2"]'));
+      expect(doc().querySelector('[data-p="2"]').classList.contains('right'), 'doubles is right');
+      expect(val('r-w') === '859 nm', `W at 3·V_bi = ${val('r-w')} (2 × 429.8 nm)`);
+    });
+
+    step('guide 05: clicking the real 3D jacks wires a reverse-biased loop', async () => {
+      click(doc().querySelector('[data-guess="tiny"]'));
+      $('bench').scrollIntoView();
+      await wait(600);
+      const canvas = $('bench').querySelector('canvas');
+      canvas.setPointerCapture = () => {};
+      canvas.releasePointerCapture = () => {};
+      const tap = (id) => {
+        const p = gd().lab.bench.jackScreen(id);
+        for (const type of ['pointerdown', 'pointerup']) {
+          canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 31, clientX: p.x, clientY: p.y, pointerType: 'mouse', button: 0, buttons: type === 'pointerdown' ? 1 : 0, bubbles: true, isPrimary: true }));
+        }
+      };
+      for (const [a, b] of [['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:n'], ['diode:p', 'supply:-']]) { tap(a); tap(b); }
+      const c = gd().lab.state.circuit;
+      expect(c.valid && c.reverse && c.ammeterForward, `circuit: ${JSON.stringify(c)} wires ${JSON.stringify(gd().lab.state.wires)}`);
+    });
+
+    step('guide 05: 10 V reads 13.3 pA (generation current); the opening guess is answered', async () => {
+      gd().lab.setSupply(10);
+      expect(val('l-i') === '13.3 pA', `ammeter ${val('l-i')}`);
+      expect(!$('lab-answer').hidden && $('lab-answer').textContent.includes('correct'), 'answer card');
+    });
+
+    step('guide 05: 120 V → breakdown, the supply holds 1 mA just below V_BR', async () => {
+      gd().lab.setSupply(120);
+      expect(val('l-i') === '1.00 mA', `ammeter ${val('l-i')}`);
+      expect($('lab-status').textContent.startsWith('Breakdown'), $('lab-status').textContent);
+      const V = -gd().lab.state.op.V;
+      expect(V < gd().VBR && V > 0.99 * gd().VBR, `diode at ${V} V`);
+      gd().lab.setSupply(0);
+    });
+
+    step('guide 05: wiring the diode the other way is forward bias (limited to 1 mA)', async () => {
+      gd().lab.state.wires = [['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:p'], ['diode:n', 'supply:-']];
+      gd().lab.refresh({ rewire: true });
+      gd().lab.setSupply(5);
+      expect(!gd().lab.state.circuit.reverse && val('l-i') === '1.00 mA', `forward reading ${val('l-i')}`);
+      gd().lab.setSupply(0);
+    });
+
+    step('guide 06–09: graded toggle, breakdown slider, QR and quiz all respond', async () => {
+      click(doc().querySelector('[data-type="abrupt"]'));
+      click(doc().querySelector('[data-type="graded"]'));
+      setRange('bvr', $('bvr').max);
+      expect(val('b-i').includes('(limit)'), `breakdown current ${val('b-i')}`);
+      await until(() => {
+        const px = $('qr').getContext('2d').getImageData(0, 0, 232, 232).data;
+        let dark = 0;
+        for (let i = 0; i < px.length; i += 4) if (px[i] < 50) dark++;
+        return dark > 5000;
+      }, 8000, 'QR code');
+      const first = doc().querySelector('#quiz .q .choice');
+      click(first);
+      expect(first.classList.contains('right'), 'quiz: first answer of question 1 is right');
+    });
+
+    step('guide: phone width has no sideways scroll; no runtime errors', async () => {
+      frame.width = 375;
+      frame.height = 812;
+      await wait(800);
+      expect(doc().documentElement.scrollWidth <= 375, `page is ${doc().documentElement.scrollWidth}px wide`);
+      frame.width = 1280;
+      frame.height = 800;
+      expect(errors.length === 0, errors.join(' | '));
+    });
+
     // ----------------------------------------------------------------- run
 
     const results = [];

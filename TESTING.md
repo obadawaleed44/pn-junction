@@ -13,15 +13,15 @@ In this folder, run:
 python tests/run_tests.py
 ```
 
-Expected last line: **`110 passed, 0 failed`**.
+Expected last line: **`129 passed, 0 failed`**.
 
 You need internet: the libraries and MediaPipe's 11 MB hand-tracking runtime load from a CDN.
 On a slow connection the camera test can time out once; just run the command again.
 
 It runs these, all in a hidden Edge window:
 
-* **58 unit tests**: physics, materials, temperature, band diagram, C–V measurement, hand-control rules, and the 3D/AR model.
-* **42 smoke tests**: they click through the exhibit, Mystery Diode, Bench 58, Emergent and Depletion.
+* **69 unit tests**: physics, materials, temperature, band diagram, C–V measurement, hand-control rules, the 3D/AR model, and the guide's graded junction and diode currents.
+* **50 smoke tests**: they click through the exhibit, Mystery Diode, Bench 58, Emergent, Depletion and the guide (including clicking the jacks of the 3D lab bench).
 * **10 AR tests**: the fake camera plays a synthetic video of the AR card, and the tests check the tracker and the real AR page.
 
 (If `tests/fixtures/xr/card_motion.mjpeg` is missing, run `python xr/tools/make_test_video.py` once. It needs `pip install opencv-python numpy`.)

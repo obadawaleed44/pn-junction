@@ -36,8 +36,9 @@ const LIGHT = {
   hole: new THREE.Color('#e0245e'),
   electron: new THREE.Color('#1673d6'),
   ion: new THREE.Color('#e09a00'),
-  ionDim: new THREE.Color('#b9ad94'),
+  ionDim: new THREE.Color('#e2ded6'),
   field: new THREE.Color('#00a6d6'),
+  fieldLow: new THREE.Color('#a9bcff'),
 };
 const PLOT_COLORS = { Ec: '#7fd8ff', Ev: '#ff86b0', EFp: '#ffe08a', EFn: '#ffe08a', E: '#9ef0ff', V: '#c3a6ff', rho: '#ffc24a' };
 
@@ -68,6 +69,7 @@ export function createJunction({ quality = 'high' } = {}) {
     });
   const halfLength = LEN / 2 - C;
   const look = { light: false };
+  const baseMaterials = [];
   const glassMaterials = [];
   const edgeLines = [];
   for (const [side, tint, sign] of [[pSide, COLORS.pTint, -1], [nSide, COLORS.nTint, 1]]) {
@@ -101,6 +103,7 @@ export function createJunction({ quality = 'high' } = {}) {
       new THREE.BoxGeometry(LEN / 2, 0.012, D * 1.12),
       new THREE.MeshStandardMaterial({ color: 0x14161d, metalness: 0.4, roughness: 0.5 }),
     );
+    baseMaterials.push(base.material);
     base.position.set((sign * LEN) / 4, -0.006, 0);
     base.receiveShadow = true;
     side.add(base);
@@ -404,6 +407,10 @@ export function createJunction({ quality = 'high' } = {}) {
     const junctionChanged = next.junction && JSON.stringify(next.junction) !== JSON.stringify(state.junction);
     if (next.junction) state.junction = { ...next.junction };
     if (next.VR !== undefined) state.VR = next.VR;
+    if (next.half !== undefined) {
+      state.half = next.half; // zoom: physical half-width shown by the slab (cm); null = fit breakdown
+      state.plotDirty = true;
+    }
     if (next.plotKind && next.plotKind !== state.plotKind) {
       state.plotKind = next.plotKind;
       state.plotDirty = true;
@@ -442,7 +449,7 @@ export function createJunction({ quality = 'high' } = {}) {
     const b = Math.sqrt(state.VR + 0.7);
     state.shownVR = Math.max(0, smooth(a, b, 7, dt) ** 2 - 0.7);
     if (Math.abs(state.shownVR - state.VR) < 1e-4) state.shownVR = state.VR;
-    const L = (state.L = layout(state.junction, state.shownVR));
+    const L = (state.L = layout(state.junction, state.shownVR, state.half ?? undefined));
 
     // Formation: halves slide together; the depletion region appears as they touch.
     const f = state.formation;
@@ -622,7 +629,7 @@ export function createJunction({ quality = 'high' } = {}) {
   }
 
   function drawPlot(L) {
-    const p = plot(state.junction, state.shownVR, state.plotKind);
+    const p = plot(state.junction, state.shownVR, state.plotKind, undefined, state.half ?? undefined);
     const y = (u) => u * PANEL.height;
     for (const id of Object.keys(plotLines)) plotLines[id].visible = false;
     for (const id of Object.keys(lineLabels)) lineLabels[id].visible = false;
@@ -675,6 +682,11 @@ export function createJunction({ quality = 'high' } = {}) {
     panelMaterial.uniforms.uFill.value = light ? 0.93 : 0.05; // blending is linear: needs a lot to look dark
     fieldMaterial.blending = blending;
     fieldMaterial.uniforms.uHigh.value.copy(light ? LIGHT.field : COLORS.fieldHigh);
+    fieldMaterial.uniforms.uLow.value.copy(light ? LIGHT.fieldLow : COLORS.fieldLow);
+    for (const m of baseMaterials) {
+      m.color.set(light ? 0xe4e7ec : 0x14161d);
+      m.metalness = light ? 0 : 0.4;
+    }
     fieldMaterial.uniforms.uGain.value = light ? 0.85 : 1;
     holeMaterial.blending = blending;
     holeMaterial.uniforms.uColor.value.copy(light ? LIGHT.hole : COLORS.hole);

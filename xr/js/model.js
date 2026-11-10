@@ -37,10 +37,12 @@ export function halfWindow(junction) {
   return Math.max(xp, xn) / FILL_AT_BREAKDOWN;
 }
 
-/** Everything the 3D model and the readouts need for one state. */
-export function layout(junction, VR) {
+/**
+ * Everything the 3D model and the readouts need for one state.
+ * `half` (cm) overrides the window, e.g. to zoom in on the 0–10 V range.
+ */
+export function layout(junction, VR, half = halfWindow(junction)) {
   const reading = analyze(junction, VR);
-  const half = halfWindow(junction);
   const scale = INNER_HALF / half; // model units per cm
   return {
     ...reading,
@@ -84,8 +86,8 @@ export const PLOTS = Object.freeze({
  * they line up with it. x in model units, y normalised to 0…1 (bottom…top of the panel).
  * Returns { lines: [{ id, points, label }], guides: [{ y, label }], meta }.
  */
-export function plot(junction, VR, kind, samples = 161) {
-  const L = layout(junction, VR);
+export function plot(junction, VR, kind, samples = 161, half = undefined) {
+  const L = layout(junction, VR, half);
   const xs = Array.from({ length: samples }, (_, i) => -INNER_HALF + (2 * INNER_HALF * i) / (samples - 1));
   const cm = (x) => x / L.scale;
 
