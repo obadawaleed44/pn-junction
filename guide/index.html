@@ -3,21 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Junction · reverse bias, step by step</title>
-  <meta name="description" content="What reverse bias does to a PN junction: the depletion region, the electric field, a circuit you can measure, graded junctions, breakdown, and the junction in AR." />
+  <title>junction. · reverse bias, drawn out</title>
+  <meta name="description" content="What reverse voltage does to a PN junction: the depletion region and its field, a circuit you build and measure, graded junctions, breakdown, and the junction in AR." />
   <link rel="icon" href="../xr/assets/icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" />
   <link rel="stylesheet" href="css/guide.css" />
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
-      }
-    }
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/contrib/auto-render.min.js"></script>
@@ -25,70 +20,56 @@
 </head>
 <body>
   <header class="top">
-    <a class="logo" href="#question"><span class="logo-mark" aria-hidden="true"></span>junction<span class="dot">.</span></a>
+    <a class="logo" href="#junction">junction<span>.</span></a>
     <nav class="toc" aria-label="Sections">
-      <a href="#question">Question</a>
-      <a href="#equilibrium">Equilibrium</a>
-      <a href="#chain">ρ → E → V</a>
-      <a href="#reverse">Reverse bias</a>
-      <a href="#lab">Lab</a>
-      <a href="#graded">Graded</a>
-      <a href="#breakdown">Breakdown</a>
-      <a href="#ar">AR</a>
-      <a href="#recap">Recap</a>
+      <a href="#junction"><i>01</i> Junction</a>
+      <a href="#chain"><i>02</i> ρ → E → V</a>
+      <a href="#reverse"><i>03</i> Reverse bias</a>
+      <a href="#graded"><i>04</i> Graded</a>
+      <a href="#ar"><i>05</i> AR</a>
+      <a href="#recap"><i>06</i> Recap</a>
+      <a href="#open-lab"><i>07</i> Open lab</a>
     </nav>
-    <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+    <ul class="legend" aria-label="Colour key">
+      <li class="c-hole">○ hole</li><li class="c-electron">● electron</li><li class="c-ion">⊖⊕ fixed ion</li><li class="c-field">→ field E</li><li class="c-current">I current</li>
+    </ul>
   </header>
 
   <main>
-    <!-- 01 ------------------------------------------------------------ -->
-    <section id="question" class="hero">
-      <p class="kicker">01 · The question</p>
-      <h1>Connect a diode <em>backwards</em>.<br />Does a current flow?</h1>
-      <p class="lede">A diode lets current through one way. Turn it around (reverse bias) and something happens inside it, invisible from the outside. Make a guess first; you will measure the answer in the lab.</p>
-      <div class="choices" id="guess" role="group" aria-label="Your guess">
-        <button class="choice" data-guess="yes">Yes, a normal current</button>
-        <button class="choice" data-guess="tiny">A tiny current</button>
-        <button class="choice" data-guess="none">None at all</button>
-      </div>
-      <p class="note" id="guess-note" hidden>Noted. Hold that thought: the answer is in <a href="#lab">section 05</a>.</p>
-      <div class="stage3d" id="stage-hero" role="img" aria-label="3D model of a silicon PN junction: p-type on the left with holes, n-type on the right with electrons, glowing ions in the depletion region between them. Drag to turn it."></div>
-    </section>
-
-    <!-- 02 ------------------------------------------------------------ -->
-    <section id="equilibrium">
+    <!-- 01 ============================================================ -->
+    <section id="junction" class="split">
       <div class="text">
-        <p class="kicker">02 · Equilibrium</p>
-        <h2>Where p meets n, the carriers disappear</h2>
-        <p>p-type silicon has mobile <b>holes</b> (○), n-type has mobile <b>electrons</b> (●). Put them together and both diffuse across the junction and recombine.</p>
-        <p>They leave behind the dopant atoms, now <b>uncovered ions</b> fixed in the crystal: ⊖ on the p-side, ⊕ on the n-side. This carrier-free zone is the <b>depletion region</b>, and its charge sets up a built-in voltage:</p>
-        <div class="formula">$$V_{bi}=\frac{kT}{q}\ln\frac{N_A N_D}{n_i^2}=0.714\ \text{V}$$</div>
-        <details class="assume"><summary>Assumptions</summary><p>Silicon at 300 K, n<sub>i</sub> = 10¹⁰ cm⁻³, N<sub>A</sub> = N<sub>D</sub> = 10¹⁶ cm⁻³, every dopant ionised, uniform doping on each side, one dimension.</p></details>
+        <p class="num">01</p>
+        <h1>Reverse bias,<br />drawn out.</h1>
+        <p class="lede">A PN junction is two kinds of silicon side by side. Where they meet, something forms that you can only see by drawing it: a thin region with no free carriers and a strong electric field. This site follows what a reverse voltage does to it.</p>
+        <p>p-type silicon carries mobile <b class="c-hole">holes</b>; n-type carries mobile <b class="c-electron">electrons</b>. Put them in contact and both diffuse across the junction and recombine. They leave behind dopant atoms locked in the crystal, now <b class="c-ion">uncovered ions</b>: ⊖ on the p-side, ⊕ on the n-side. That carrier-free zone is the <b class="c-ion">depletion region</b>. Its charge sets up a built-in voltage that stops further diffusion:</p>
+        <div class="formula">$$V_{bi}=\frac{kT}{q}\ln\frac{N_AN_D}{n_i^2}=0.714\ \text{V}$$</div>
+        <details class="assume"><summary>Assumptions</summary><p>Silicon at 300 K, n<sub>i</sub> = 10¹⁰ cm⁻³, N<sub>A</sub> = N<sub>D</sub> = 10¹⁶ cm⁻³, uniform doping on each side, every dopant ionised, one dimension.</p></details>
       </div>
       <div class="visual">
-        <div class="stepper" role="group" aria-label="Formation steps">
-          <button class="step" data-stage="0">1 · Apart</button>
-          <button class="step" data-stage="1">2 · Contact</button>
-          <button class="step" data-stage="2">3 · Equilibrium</button>
+        <div class="stepper" role="group" aria-label="Formation">
+          <button class="step" data-stage="0">1 Apart</button>
+          <button class="step" data-stage="1">2 Contact</button>
+          <button class="step" data-stage="2">3 Equilibrium</button>
         </div>
-        <div class="stage3d" id="stage-eq" role="img" aria-label="3D model: the p and n halves join and the depletion region forms"></div>
+        <div class="stage3d tall" id="stage-eq" role="img" aria-label="Line drawing of the junction: the p and n halves join and the depletion region forms. Drag to turn it."></div>
         <p class="caption" id="eq-caption"></p>
       </div>
     </section>
 
-    <!-- 03 ------------------------------------------------------------ -->
-    <section id="chain">
+    <!-- 02 ============================================================ -->
+    <section id="chain" class="split">
       <div class="text">
-        <p class="kicker">03 · The chain ρ → E → V</p>
+        <p class="num">02</p>
         <h2>Charge makes the field, the field makes the voltage</h2>
-        <p>Everything about the junction follows from one chain. Each step is an integral (Gauss's law, then the definition of potential).</p>
+        <p>Everything about the junction follows from one chain of two integrals.</p>
         <ol class="chain" id="chain-steps">
-          <li data-k="0"><b>Charge ρ(x).</b> −qN<sub>A</sub> over x<sub>p</sub>, +qN<sub>D</sub> over x<sub>n</sub>. The two areas are equal: $N_A x_p = N_D x_n$.</li>
-          <li data-k="1"><b>Field E(x).</b> Integrate ρ/ε: a triangle, zero at both edges, largest at the junction, pointing from n to p. $E_{max}=\dfrac{qN_Ax_p}{\varepsilon_s}$</li>
-          <li data-k="2"><b>Potential V(x).</b> Integrate E: two parabolas. The area of the triangle is the whole voltage across it: $V_{bi}+V_R=\tfrac12E_{max}W$</li>
+          <li data-k="0"><b class="c-ion">Charge ρ(x).</b> −qN<sub>A</sub> over x<sub>p</sub>, +qN<sub>D</sub> over x<sub>n</sub>. Equal areas: $N_Ax_p=N_Dx_n$.</li>
+          <li data-k="1"><b class="c-field">Field E(x).</b> Gauss's law, integrate ρ/ε<sub>s</sub>: a triangle, zero at the edges, largest at the junction, pointing n → p. $E_{max}=qN_Ax_p/\varepsilon_s$</li>
+          <li data-k="2"><b class="c-potential">Potential V(x).</b> Integrate E: two parabolas. The triangle's area is the whole voltage: $V_{bi}+V_R=\tfrac12E_{max}W$</li>
         </ol>
         <div class="row"><button class="btn" id="chain-next">Integrate →</button><button class="btn ghost" id="chain-reset">Start over</button></div>
-        <details class="assume"><summary>Assumptions</summary><p><b>Depletion approximation:</b> no free carriers inside −x<sub>p</sub> … x<sub>n</sub>, exactly neutral outside, and sharp edges. A full numerical solution softens the edges over a few Debye lengths (≈ 40 nm here) but barely changes W.</p></details>
+        <details class="assume"><summary>Assumptions</summary><p><b>Depletion approximation:</b> no free carriers inside −x<sub>p</sub> … x<sub>n</sub>, exactly neutral outside, sharp edges. A full numerical solution softens the edges over a few Debye lengths (≈ 40 nm here) but barely changes W.</p></details>
       </div>
       <div class="visual">
         <figure class="figure"><svg id="fig-chain-bar" viewBox="0 0 800 200" role="img" aria-label="The junction at equilibrium"></svg>
@@ -96,187 +77,121 @@
       </div>
     </section>
 
-    <!-- 04 ------------------------------------------------------------ -->
-    <section id="reverse">
-      <div class="text">
-        <p class="kicker">04 · Reverse bias</p>
-        <h2>Reverse voltage pulls the junction apart</h2>
-        <p>Connect <b>p to −</b> and <b>n to +</b>. The battery pulls holes and electrons away from the junction, more ions are uncovered, and the depletion region widens. The bigger charge makes a stronger field.</p>
-        <div class="formula">$$W=\sqrt{\frac{2\varepsilon_s}{q}\Big(\frac1{N_A}+\frac1{N_D}\Big)(V_{bi}+V_R)}$$ $$E_{max}=\frac{2(V_{bi}+V_R)}{W}$$</div>
-        <div class="predict" id="predict">
-          <p class="q">Predict: if (V<sub>bi</sub> + V<sub>R</sub>) becomes <b>4×</b> bigger, what does W do?</p>
-          <div class="choices small">
-            <button class="choice" data-p="2">doubles</button>
-            <button class="choice" data-p="4">4× wider</button>
-            <button class="choice" data-p="16">16× wider</button>
-          </div>
-          <p class="note" id="predict-note" hidden></p>
+    <!-- 03 ============================================================ -->
+    <section id="reverse" class="full">
+      <div class="text two-col">
+        <div>
+          <p class="num">03</p>
+          <h2>Reverse bias: build it, then measure it</h2>
+          <p>Connect the junction to the supply the "wrong" way: <b>n to +</b>, <b>p to −</b>. The supply pulls holes and electrons away from the junction, more ions are uncovered, and the depletion region widens. More charge, stronger field:</p>
+          <div class="formula">$$W=\sqrt{\frac{2\varepsilon_s}{q}\Big(\frac1{N_A}+\frac1{N_D}\Big)(V_{bi}+V_R)}$$ $$E_{max}=\frac{2(V_{bi}+V_R)}{W}$$</div>
         </div>
-        <details class="assume"><summary>Assumptions</summary><p>Abrupt junction, depletion approximation, the voltage drops only across the depletion region (no series resistance), and the diode is long enough that W never reaches a contact.</p></details>
+        <ol class="story" id="story">
+          <li data-s="0"><b>Wire it.</b> Use the <i>Wire</i> tool: drag a cable from the supply's <b>+</b> to the junction's <b class="c-electron">N</b>, and from <b class="c-hole">P</b> to <b>−</b>.</li>
+          <li data-s="1"><b>Turn it up.</b> Raise the supply. Watch the <span class="c-ion">depletion region</span> widen and the <span class="c-field">field arrows</span> grow, and the graphs below.</li>
+          <li data-s="2"><b>Is a current flowing?</b> <span class="ask">Where would you put an ammeter to find out?</span>
+            <button class="btn small" id="add-ammeter" hidden>Put the ammeter on the bench</button></li>
+          <li data-s="3"><b>Measure.</b> The ammeter goes <i>in series</i>, inside the loop: unplug one cable and run it through IN and OUT. Then read it.</li>
+          <li data-s="4"><b>Breakdown.</b> <span class="note-bd">Keep turning past about <b>103 V</b>. The peak field reaches E<sub>crit</sub> ≈ 4·10⁵ V/cm and an avalanche starts: the current jumps from picoamps to the supply's 1 mA limit, and the voltage stops rising. Sparks show it in the junction.</span></li>
+        </ol>
       </div>
-      <div class="visual">
-        <div class="control">
-          <label for="vr">Reverse voltage <i>V</i><sub>R</sub></label>
-          <input id="vr" type="range" min="0" max="10" step="0.01" value="0" />
-          <output id="vr-out">0.00 V</output>
-        </div>
-        <div class="seg-row" role="group" aria-label="Doping">
-          <button class="seg" data-dope="sym" aria-pressed="true">N<sub>A</sub> = N<sub>D</sub></button>
-          <button class="seg" data-dope="pn" aria-pressed="false">p⁺n (N<sub>A</sub> = 10¹⁸)</button>
-        </div>
-        <div class="stage3d" id="stage-rev" role="img" aria-label="3D model of the junction connected to a battery in reverse bias"></div>
-        <figure class="figure"><svg id="fig-rev-plots" viewBox="0 0 800 300" role="img" aria-label="Field and charge under reverse bias"></svg></figure>
-        <dl class="readouts">
-          <div><dt>W</dt><dd id="r-w"></dd></div>
-          <div><dt>x<sub>p</sub> / x<sub>n</sub></dt><dd id="r-x"></dd></div>
-          <div><dt>E<sub>max</sub></dt><dd id="r-e"></dd></div>
-        </dl>
+      <div class="lab" id="lab-guided">
+        <div class="bench stage3d" role="application" aria-label="Circuit bench in 3D. Tools: Move, Wire, Inspect."></div>
+        <aside class="lab-side"></aside>
       </div>
-    </section>
-
-    <!-- 05 ------------------------------------------------------------ -->
-    <section id="lab" class="wide">
-      <div class="text">
-        <p class="kicker">05 · The lab</p>
-        <h2>Build the circuit and measure it</h2>
-        <p>Wire the <b>supply</b>, the <b>ammeter</b> and the <b>diode</b> in one loop: click a terminal, then another. Reverse bias means n to + and p to −. Then turn up the voltage and read the ammeter.</p>
-      </div>
-      <div class="lab">
-        <div class="bench">
-          <div id="bench" class="bench3d" role="application" aria-label="3D circuit bench: click a jack, then another, to connect them with a cable; click a cable to unplug it; drag to turn the bench"></div>
-          <div class="bench-bar">
-            <span class="status" id="lab-status">Connect the supply, ammeter and diode in one loop.</span>
-            <span class="bench-actions"><button class="btn ghost small" id="lab-auto">Wire it for me</button><button class="btn ghost small" id="lab-clear">Clear wires</button></span>
-          </div>
-        </div>
-        <aside class="lab-side">
-          <div class="control">
-            <label for="supply">Supply voltage</label>
-            <input id="supply" type="range" min="0" max="120" step="0.1" value="0" disabled />
-            <output id="supply-out">0.0 V</output>
-          </div>
-          <div class="row"><button class="btn small" id="lab-record" disabled>Record point</button><button class="btn ghost small" id="lab-forget">Clear points</button></div>
-          <dl class="readouts compact">
-            <div><dt>Ammeter</dt><dd id="l-i">—</dd></div>
-            <div><dt>Across the diode</dt><dd id="l-v">—</dd></div>
-            <div><dt>W</dt><dd id="l-w">—</dd></div>
-            <div><dt>E<sub>max</sub> / E<sub>crit</sub></dt><dd id="l-e">—</dd></div>
-          </dl>
-          <svg id="fig-iv" viewBox="0 0 420 260" role="img" aria-label="Measured reverse current against reverse voltage, logarithmic"></svg>
-          <div class="answer" id="lab-answer" hidden></div>
-        </aside>
-      </div>
-      <details class="assume wide"><summary>What the ammeter adds up</summary>
-        <p><b>Ideal (Shockley) diffusion current</b> $I_s=qAn_i^2\big(\tfrac{D_p}{L_pN_D}+\tfrac{D_n}{L_nN_A}\big)\approx1.5$ fA: minority carriers that wander into the junction from the neutral sides. It is constant in reverse bias.</p>
-        <p><b>Generation current</b> $I_{gen}=\dfrac{qn_iWA}{2\tau}$: heat creates electron–hole pairs <i>inside</i> the depletion region and the field sweeps them out. It grows with W, so like √(V<sub>bi</sub> + V<sub>R</sub>). The ideal diode equation leaves this out, yet in silicon it is about 1000× larger.</p>
-        <p><b>Near breakdown</b> both are multiplied by $M=1/\big(1-(V_R/V_{BR})^4\big)$ (Miller). The supply limits the current to 1 mA, which protects the diode.</p>
-        <p>Diode: 100 µm × 100 µm, D<sub>n</sub> = 35, D<sub>p</sub> = 12 cm²/s, all lifetimes 1 µs.</p>
+      <figure class="figure flat"><svg id="fig-rev-plots" viewBox="0 0 800 300" role="img" aria-label="Charge and field across the junction on the bench"></svg></figure>
+      <div class="answer" id="answer" hidden></div>
+      <details class="assume wide"><summary>What the ammeter adds up, and what we simplify</summary>
+        <p><b>Ideal (Shockley) diffusion current</b> $I_s=qAn_i^2\big(\tfrac{D_p}{L_pN_D}+\tfrac{D_n}{L_nN_A}\big)\approx1.5$ fA. Constant in reverse bias.</p>
+        <p><b>Generation current</b> $I_{gen}=qn_iWA/2\tau$: heat creates electron–hole pairs <i>inside</i> the depletion region and the field sweeps them out. It grows with W, like √(V<sub>bi</sub>+V<sub>R</sub>). The ideal diode equation leaves it out, yet in silicon it is ~1000× larger.</p>
+        <p><b>Breakdown:</b> near V<sub>BR</sub> both are multiplied by $M=1/(1-(V_R/V_{BR})^4)$ (Miller). $V_{BR}=\varepsilon_sE_{crit}^2/2qN_{eff}-V_{bi}\approx103$ V. We take one fixed E<sub>crit</sub>; really it rises slowly with doping, and very heavily doped junctions break down by tunnelling (Zener) instead. Breakdown is not damage by itself if the current is limited, as our supply does.</p>
+        <p>Diode: 100 µm × 100 µm, D<sub>n</sub> = 35, D<sub>p</sub> = 12 cm²/s, lifetimes 1 µs. All voltage drops across the depletion region; no series resistance.</p>
       </details>
     </section>
 
-    <!-- 06 ------------------------------------------------------------ -->
-    <section id="graded">
+    <!-- 04 ============================================================ -->
+    <section id="graded" class="split">
       <div class="text">
-        <p class="kicker">06 · Beyond the step: the graded junction</p>
-        <h2>When the doping changes gradually</h2>
-        <p>Real junctions made by diffusion are not a sharp step. Near the junction the doping changes <b>linearly</b>: $N_D-N_A=a\,x$. Same chain, different shapes. ρ becomes a ramp, E becomes a parabola, V a cubic:</p>
+        <p class="num">04</p>
+        <h2>Beyond the step: the linearly graded junction</h2>
+        <p>Junctions made by diffusion are not a sharp step. Near the junction the doping changes <b>linearly</b>, $N_D-N_A=a\,x$. Same chain, different shapes: <span class="c-ion">ρ</span> is a ramp, <span class="c-field">E</span> a parabola, <span class="c-potential">V</span> a cubic.</p>
         <table class="compare">
           <thead><tr><th></th><th>Abrupt</th><th>Linearly graded</th></tr></thead>
           <tbody>
-            <tr><td>ρ(x)</td><td>steps ±qN</td><td>ramp q·a·x</td></tr>
-            <tr><td>E(x)</td><td>triangle</td><td>parabola</td></tr>
-            <tr><td>E<sub>max</sub></td><td>$\tfrac{2(V_{bi}+V_R)}{W}$</td><td>$\tfrac{3(V_{bi}+V_R)}{2W}$</td></tr>
-            <tr><td>W</td><td>$\propto(V_{bi}+V_R)^{1/2}$</td><td>$\propto(V_{bi}+V_R)^{1/3}$</td></tr>
+            <tr><td class="c-ion">ρ(x)</td><td>steps ±qN</td><td>ramp q·a·x</td></tr>
+            <tr><td class="c-field">E(x)</td><td>triangle</td><td>parabola</td></tr>
+            <tr><td class="c-field">E<sub>max</sub></td><td>$\tfrac{2(V_{bi}+V_R)}{W}$</td><td>$\tfrac{3(V_{bi}+V_R)}{2W}$</td></tr>
+            <tr><td class="c-ion">W</td><td>$\propto(V_{bi}+V_R)^{1/2}$</td><td>$\propto(V_{bi}+V_R)^{1/3}$</td></tr>
           </tbody>
         </table>
-        <p>The exponent is the fingerprint: on a log–log plot W against (V<sub>bi</sub>+V<sub>R</sub>) is a straight line of slope ½ or ⅓. A capacitance measurement (C = εA/W) reads it off a real diode.</p>
-        <details class="assume"><summary>Assumptions</summary><p>Gradient a = 10²⁰ cm⁻⁴ (the doping changes by 10¹⁶ cm⁻³ per µm). The depletion region is then symmetric, ±W/2. Built-in voltage: $V_{bi}=\tfrac{2kT}{q}\ln\tfrac{aW_0}{2n_i}$, solved together with W₀ (0.667 V).</p></details>
+        <p>The exponent is the fingerprint: on log–log axes W against (V<sub>bi</sub>+V<sub>R</sub>) is a straight line of slope ½ or ⅓. A capacitance measurement (C = εA/W) reads it off a real diode.</p>
+        <details class="assume"><summary>Assumptions</summary><p>Gradient a = 10²⁰ cm⁻⁴ (10¹⁶ cm⁻³ per µm); the depletion region is symmetric, ±W/2. $V_{bi}=\tfrac{2kT}{q}\ln\tfrac{aW_0}{2n_i}$, solved together with W₀: 0.667 V.</p></details>
       </div>
       <div class="visual">
         <div class="seg-row" role="group" aria-label="Junction type">
           <button class="seg" data-type="abrupt" aria-pressed="false">Abrupt</button>
           <button class="seg" data-type="graded" aria-pressed="true">Linearly graded</button>
         </div>
-        <div class="control">
-          <label for="gvr">Reverse voltage <i>V</i><sub>R</sub></label>
-          <input id="gvr" type="range" min="0" max="10" step="0.01" value="2" />
-          <output id="gvr-out">2.00 V</output>
-        </div>
-        <div class="stage3d" id="stage-g" role="img" aria-label="3D model of the selected junction: abrupt, or linearly graded with doping that grows away from the junction"></div>
+        <div class="control"><label for="gvr">Reverse voltage <i>V</i><sub>R</sub></label><input id="gvr" type="range" min="0" max="10" step="0.01" value="2" /><output id="gvr-out">2.00 V</output></div>
+        <div class="stage3d" id="stage-g" role="img" aria-label="Line drawing of the selected junction"></div>
         <figure class="figure"><svg id="fig-g-plots" viewBox="0 0 800 420" role="img" aria-label="Charge, field and potential of the selected junction"></svg></figure>
-        <figure class="figure"><svg id="fig-loglog" viewBox="0 0 800 300" role="img" aria-label="Depletion width against total voltage on log–log axes: slope one half for abrupt, one third for graded"></svg></figure>
+        <figure class="figure"><svg id="fig-loglog" viewBox="0 0 800 300" role="img" aria-label="W against total voltage, log–log: slope one half abrupt, one third graded"></svg></figure>
       </div>
     </section>
 
-    <!-- 07 ------------------------------------------------------------ -->
-    <section id="breakdown">
+    <!-- 05 ============================================================ -->
+    <section id="ar" class="split">
       <div class="text">
-        <p class="kicker">07 · Breakdown</p>
-        <h2>The field has a limit</h2>
-        <p>E<sub>max</sub> keeps growing with V<sub>R</sub>. Around <b>E<sub>crit</sub> ≈ 4·10⁵ V/cm</b> an electron crossing the junction gains enough energy to knock a new electron–hole pair loose, which knocks more loose: an <b>avalanche</b>. The current shoots up.</p>
-        <div class="formula">$$V_{BR}=\frac{\varepsilon_sE_{crit}^2}{2qN_{eff}}-V_{bi}\approx103\ \text{V}$$ $$N_{eff}=\frac{N_AN_D}{N_A+N_D}$$</div>
-        <p>Lighter doping makes the field ramp up more slowly, so it takes more voltage to reach E<sub>crit</sub>. Diodes built to block high voltages are lightly doped.</p>
-        <details class="assume"><summary>Assumptions and what we simplify</summary><p>We take one fixed E<sub>crit</sub>. In reality it rises slowly with doping (≈ 3–6·10⁵ V/cm). Very heavily doped junctions break down earlier by <b>tunnelling</b> (Zener breakdown) instead of avalanche. Breakdown is not damage by itself: the current must be limited, which our lab's supply does.</p></details>
+        <p class="num">05</p>
+        <h2>See it in your room</h2>
+        <p>The same junction in 3D, standing on your desk. Scan the code, allow the camera, point the phone at the card: on this screen or a printed one. Slide the voltage and watch the depletion region open in front of you.</p>
+        <p class="small">Works in the phone's browser on iPhone and Android, no app. Android phones with ARCore also offer <b>Table mode</b>: no card, any flat surface.</p>
+        <div class="row"><a class="btn" href="../xr/ar.html">Open AR on this device</a><a class="btn ghost" href="../xr/card.html">Print the card</a></div>
       </div>
-      <div class="visual">
-        <div class="control">
-          <label for="bvr">Reverse voltage <i>V</i><sub>R</sub></label>
-          <input id="bvr" type="range" min="0" max="104" step="0.1" value="40" />
-          <output id="bvr-out">40.0 V</output>
-        </div>
-        <div class="stage3d" id="stage-bd" role="img" aria-label="3D model of the junction near breakdown: avalanche sparks in the strongest field, current pulses in the wires"></div>
-        <figure class="figure"><svg id="fig-bd" viewBox="0 0 800 320" role="img" aria-label="Field profile against the critical field"></svg></figure>
-        <dl class="readouts">
-          <div><dt>E<sub>max</sub> / E<sub>crit</sub></dt><dd id="b-ratio"></dd></div>
-          <div><dt>Multiplication M</dt><dd id="b-m"></dd></div>
-          <div><dt>Reverse current</dt><dd id="b-i"></dd></div>
-        </dl>
-      </div>
-    </section>
-
-    <!-- 08 ------------------------------------------------------------ -->
-    <section id="ar" class="wide ar">
-      <div class="text">
-        <p class="kicker">08 · See it in your room</p>
-        <h2>Now hold it in your hands</h2>
-        <p>Everything above, in 3D, standing on your desk. Scan the code with your phone, allow the camera, and point it at the card: on this screen or a printed one. Slide the voltage and watch the depletion region open in front of you.</p>
-        <ol class="steps"><li>Scan the code</li><li>Tap <b>Card mode</b>, allow the camera</li><li>Point at the card, 20–40 cm away</li></ol>
-        <p class="note">Works in the phone's browser, iPhone and Android, no app. Android phones with ARCore also offer <b>Table mode</b>: no card, any flat surface.</p>
-        <div class="row"><a class="btn" href="../xr/ar.html">Open AR on this device</a><a class="btn ghost" href="../xr/">Open the 3D model</a><a class="btn ghost" href="../xr/card.html">Print the card</a></div>
-      </div>
-      <div class="ar-pair">
-        <div class="qr"><canvas id="qr" width="232" height="232" aria-label="QR code that opens the AR page"></canvas><span>Scan me</span></div>
+      <div class="visual ar-pair">
+        <div class="qr"><canvas id="qr" width="232" height="232" aria-label="QR code that opens the AR page"></canvas><span>scan</span></div>
         <img class="card" src="../xr/assets/card.png" alt="The AR card your phone looks for" />
       </div>
     </section>
 
-    <!-- 09 ------------------------------------------------------------ -->
-    <section id="recap" class="wide">
+    <!-- 06 ============================================================ -->
+    <section id="recap" class="split">
       <div class="text">
-        <p class="kicker">09 · Recap</p>
-        <h2>The whole story in four lines</h2>
+        <p class="num">06</p>
+        <h2>The story in four lines</h2>
         <ol class="recap">
-          <li><b>Charge sets the field.</b> Uncovered ions in the depletion region make a triangular field, largest at the junction.</li>
-          <li><b>Voltage stretches it.</b> Reverse bias uncovers more charge: W ∝ √(V<sub>bi</sub>+V<sub>R</sub>) and E<sub>max</sub> = 2(V<sub>bi</sub>+V<sub>R</sub>)/W.</li>
-          <li><b>The current stays tiny.</b> Only pA leak, and the leak grows with W. The real diode beats the ideal one.</li>
-          <li><b>The field limits it.</b> At E<sub>crit</sub> the avalanche starts: breakdown. A graded junction follows the same chain with W ∝ (V<sub>bi</sub>+V<sub>R</sub>)<sup>1/3</sup>.</li>
+          <li><b class="c-ion">Charge sets the field.</b> Uncovered ions make a triangular field, largest at the junction.</li>
+          <li><b class="c-field">Voltage stretches it.</b> W ∝ √(V<sub>bi</sub>+V<sub>R</sub>), E<sub>max</sub> = 2(V<sub>bi</sub>+V<sub>R</sub>)/W.</li>
+          <li><b class="c-current">The current stays tiny.</b> Picoamps, growing with W: the real diode beats the ideal one.</li>
+          <li><b>The field limits it.</b> At E<sub>crit</sub>, avalanche breakdown. A graded junction follows the same chain with W ∝ (V<sub>bi</sub>+V<sub>R</sub>)<sup>1/3</sup>.</li>
         </ol>
+        <details class="assume"><summary>Everything we assumed</summary>
+          <ul>
+            <li>Silicon, 300 K, n<sub>i</sub> = 10¹⁰ cm⁻³, ε<sub>s</sub> = 11.7 ε₀; one dimension.</li>
+            <li>Uniform doping each side (abrupt) or constant gradient a (graded); all dopants ionised; non-degenerate.</li>
+            <li>Depletion approximation; all voltage across the depletion region; ohmic contacts; W never reaches a contact.</li>
+            <li>Currents: ideal diffusion + generation in the depletion region (τ = 1 µs); Miller multiplication near breakdown; no surface leakage.</li>
+            <li>One constant E<sub>crit</sub> = 4·10⁵ V/cm; no Zener tunnelling; no self-heating.</li>
+          </ul>
+        </details>
       </div>
-      <div class="quiz" id="quiz"></div>
-      <details class="assume wide"><summary>Everything we assumed, in one place</summary>
-        <ul>
-          <li>Silicon, 300 K, n<sub>i</sub> = 10¹⁰ cm⁻³, ε<sub>s</sub> = 11.7 ε<sub>0</sub>; one dimension.</li>
-          <li>Uniform doping on each side (abrupt) or a constant gradient a (graded); every dopant ionised; non-degenerate.</li>
-          <li>Depletion approximation: sharp edges, no free carriers inside, neutral outside.</li>
-          <li>All applied voltage drops across the depletion region; ohmic contacts; W never reaches the contacts.</li>
-          <li>Currents: ideal diffusion current plus generation in the depletion region (τ = 1 µs); no surface leakage; Miller multiplication near breakdown.</li>
-          <li>One constant E<sub>crit</sub> = 4·10⁵ V/cm; no tunnelling (Zener) breakdown; no self-heating.</li>
-        </ul>
-      </details>
-      <footer class="foot">Built for the semiconductor devices course. Physics code and tests: <a href="https://github.com/obadawaleed44/pn-junction">github.com/obadawaleed44/pn-junction</a>.</footer>
+      <div class="visual"><div class="quiz" id="quiz"></div></div>
+    </section>
+
+    <!-- 07 ============================================================ -->
+    <section id="open-lab" class="full">
+      <div class="text">
+        <p class="num">07</p>
+        <h2>Open lab</h2>
+        <p>A free bench: move the parts, wire them any way you like, inspect anything. Try it backwards too.</p>
+      </div>
+      <div class="lab" id="lab-open">
+        <div class="bench stage3d" role="application" aria-label="Open circuit bench in 3D"></div>
+        <aside class="lab-side"></aside>
+      </div>
+      <footer class="foot">Physics code and 130 automated tests: <a href="https://github.com/obadawaleed44/pn-junction">github.com/obadawaleed44/pn-junction</a></footer>
     </section>
   </main>
-
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

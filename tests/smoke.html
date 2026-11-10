@@ -560,10 +560,19 @@
     // ---------------------------------------------------- guide/ (the presented site)
 
     const gd = () => win().__guide;
-    const val = (id) => $(id).textContent;
-    const setRange = (id, v) => { $(id).value = v; $(id).dispatchEvent(new (win().Event)('input')); };
+    const pointer = (canvas, type, p) => canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 41, clientX: p.x, clientY: p.y, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, isPrimary: true }));
+    const benchCanvas = (lab) => { const c = lab.bench.view.renderer.domElement; c.setPointerCapture = () => {}; c.releasePointerCapture = () => {}; return c; };
+    const dragWire = (lab, a, b) => {
+      const c = benchCanvas(lab);
+      const A = lab.bench.jackScreen(a);
+      const B = lab.bench.jackScreen(b);
+      pointer(c, 'pointerdown', A);
+      pointer(c, 'pointermove', { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 });
+      pointer(c, 'pointermove', B);
+      pointer(c, 'pointerup', B);
+    };
 
-    step('guide: loads, all four 3D views render, no errors', async () => {
+    step('guide: loads, the line drawings and both benches render, no errors', async () => {
       frame.width = 1280;
       frame.height = 800;
       frame.src = '../guide/';
@@ -571,67 +580,75 @@
       errors.length = 0;
       win().addEventListener('error', (e) => errors.push(e.message));
       win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
-      for (const id of ['stage-hero', 'stage-eq', 'stage-rev', 'bench']) {
+      for (const id of ['stage-eq', 'stage-g', 'lab-guided', 'lab-open']) {
         $(id).scrollIntoView();
         await until(() => $(id).querySelector('canvas'), 5000, `${id} canvas`);
       }
-      await until(() => gd().lab.bench.view.frames > 5, 10000, 'the bench to render');
+      $('lab-guided').scrollIntoView();
+      await until(() => gd().guided.bench.view.frames > 5, 10000, 'the bench to render');
     });
 
-    step('guide 04: 10 V gives W = 1.66 µm; "4× the voltage" doubles W', async () => {
-      setRange('vr', 10);
-      expect(val('r-w') === '1.66 µm', `W ${val('r-w')}`);
-      click(doc().querySelector('[data-p="2"]'));
-      expect(doc().querySelector('[data-p="2"]').classList.contains('right'), 'doubles is right');
-      expect(val('r-w') === '859 nm', `W at 3·V_bi = ${val('r-w')} (2 × 429.8 nm)`);
+    step('guide 03: dragging cables between the 3D jacks wires reverse bias (no ammeter yet)', async () => {
+      $('lab-guided').scrollIntoView();
+      await wait(400);
+      dragWire(gd().guided, 'supply:+', 'diode:n');
+      dragWire(gd().guided, 'diode:p', 'supply:-');
+      const c = gd().guided.state.circuit;
+      expect(c.valid && c.reverse && !c.hasAmmeter, `circuit ${JSON.stringify(c)} wires ${JSON.stringify(gd().guided.state.wires)}`);
     });
 
-    step('guide 05: clicking the real 3D jacks wires a reverse-biased loop', async () => {
-      click(doc().querySelector('[data-guess="tiny"]'));
-      $('bench').scrollIntoView();
-      await wait(600);
-      const canvas = $('bench').querySelector('canvas');
-      canvas.setPointerCapture = () => {};
-      canvas.releasePointerCapture = () => {};
-      const tap = (id) => {
-        const p = gd().lab.bench.jackScreen(id);
-        for (const type of ['pointerdown', 'pointerup']) {
-          canvas.dispatchEvent(new (win().PointerEvent)(type, { pointerId: 31, clientX: p.x, clientY: p.y, pointerType: 'mouse', button: 0, buttons: type === 'pointerdown' ? 1 : 0, bubbles: true, isPrimary: true }));
-        }
-      };
-      for (const [a, b] of [['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:n'], ['diode:p', 'supply:-']]) { tap(a); tap(b); }
-      const c = gd().lab.state.circuit;
-      expect(c.valid && c.reverse && c.ammeterForward, `circuit: ${JSON.stringify(c)} wires ${JSON.stringify(gd().lab.state.wires)}`);
+    step('guide 03: 10 V gives W = 1.66 µm; the question asks for an ammeter', async () => {
+      gd().guided.setSupply(10);
+      expect(gd().guided.read('w') === '1.66 µm', `W ${gd().guided.read('w')}`);
+      expect(gd().guided.read('i').includes('ammeter'), `current ${gd().guided.read('i')}`);
+      expect(!$('add-ammeter').hidden, 'the "put the ammeter on the bench" button is offered');
     });
 
-    step('guide 05: 10 V reads 13.3 pA (generation current); the opening guess is answered', async () => {
-      gd().lab.setSupply(10);
-      expect(val('l-i') === '13.3 pA', `ammeter ${val('l-i')}`);
-      expect(!$('lab-answer').hidden && $('lab-answer').textContent.includes('correct'), 'answer card');
+    step('guide 03: ammeter in series reads 13.3 pA at 10 V and the answer appears', async () => {
+      click($('add-ammeter'));
+      gd().guided.wire([['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:n'], ['diode:p', 'supply:-']]);
+      expect(gd().guided.read('i') === '13.3 pA', `ammeter ${gd().guided.read('i')}`);
+      expect(!$('answer').hidden && $('answer').textContent.includes('pA'), 'answer card');
     });
 
-    step('guide 05: 120 V → breakdown, the supply holds 1 mA just below V_BR', async () => {
-      gd().lab.setSupply(120);
-      expect(val('l-i') === '1.00 mA', `ammeter ${val('l-i')}`);
-      expect($('lab-status').textContent.startsWith('Breakdown'), $('lab-status').textContent);
-      const V = -gd().lab.state.op.V;
-      expect(V < gd().VBR && V > 0.99 * gd().VBR, `diode at ${V} V`);
-      gd().lab.setSupply(0);
+    step('guide 03: 120 V → breakdown live on the bench, 1 mA limit', async () => {
+      gd().guided.setSupply(120);
+      expect(gd().guided.read('i') === '1.00 mA', `ammeter ${gd().guided.read('i')}`);
+      expect(doc().querySelector('#lab-guided [data-r="task"]').textContent.startsWith('Breakdown'), 'breakdown explained');
+      expect(doc().querySelector('#story li[data-s="4"]').classList.contains('now'), 'story at step 5');
+      gd().guided.setSupply(0);
     });
 
-    step('guide 05: wiring the diode the other way is forward bias (limited to 1 mA)', async () => {
-      gd().lab.state.wires = [['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:p'], ['diode:n', 'supply:-']];
-      gd().lab.refresh({ rewire: true });
-      gd().lab.setSupply(5);
-      expect(!gd().lab.state.circuit.reverse && val('l-i') === '1.00 mA', `forward reading ${val('l-i')}`);
-      gd().lab.setSupply(0);
+    step('guide 03: Move drags an instrument; Inspect explains the junction', async () => {
+      const lab = gd().guided;
+      const c = benchCanvas(lab);
+      doc().querySelector('#lab-guided [data-tool="move"]').click();
+      const before = lab.bench.partScreen('supply');
+      pointer(c, 'pointerdown', before);
+      pointer(c, 'pointermove', { x: before.x - 60, y: before.y + 30 });
+      pointer(c, 'pointerup', { x: before.x - 60, y: before.y + 30 });
+      const after = lab.bench.partScreen('supply');
+      expect(Math.hypot(after.x - before.x, after.y - before.y) > 30, `supply moved ${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+      doc().querySelector('#lab-guided [data-tool="inspect"]').click();
+      const d = lab.bench.partScreen('diode');
+      pointer(c, 'pointerdown', d);
+      pointer(c, 'pointerup', d);
+      const card = doc().querySelector('#lab-guided [data-r="inspect"]');
+      expect(!card.hidden && card.textContent.includes('PN junction'), `inspect: ${card.textContent.slice(0, 60)}`);
     });
 
-    step('guide 06–09: graded toggle, breakdown slider, QR and quiz all respond', async () => {
+    step('guide 07: the open lab wired backwards opens the forward-bias note', async () => {
+      gd().open.wire([['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:p'], ['diode:n', 'supply:-']]);
+      gd().open.setSupply(3);
+      const fw = doc().querySelector('#lab-open [data-r="forward"]');
+      expect(!fw.hidden && fw.textContent.includes('forward'), 'forward note');
+      expect(gd().open.read('i') === '1.00 mA', `forward current ${gd().open.read('i')}`);
+    });
+
+    step('guide 04–06: graded toggle, QR and quiz respond', async () => {
       click(doc().querySelector('[data-type="abrupt"]'));
       click(doc().querySelector('[data-type="graded"]'));
-      setRange('bvr', $('bvr').max);
-      expect(val('b-i').includes('(limit)'), `breakdown current ${val('b-i')}`);
+      expect(gd().g.model.state.graded, 'graded 3D');
       await until(() => {
         const px = $('qr').getContext('2d').getImageData(0, 0, 232, 232).data;
         let dark = 0;
@@ -640,7 +657,7 @@
       }, 8000, 'QR code');
       const first = doc().querySelector('#quiz .q .choice');
       click(first);
-      expect(first.classList.contains('right'), 'quiz: first answer of question 1 is right');
+      expect(first.classList.contains('right'), 'quiz');
     });
 
     step('guide: phone width has no sideways scroll; no runtime errors', async () => {
