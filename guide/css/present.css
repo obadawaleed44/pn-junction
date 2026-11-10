@@ -1,0 +1,62 @@
+/* present.css — the fly-through: a full-screen 3D world, one text card per scene. */
+
+body.present { overflow: hidden; height: 100vh; background: #fff; }
+.world { position: fixed; inset: 0; }
+.world canvas { display: block; width: 100%; height: 100%; }
+
+.p-top { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center; gap: 24px; padding: 14px 28px; }
+.p-top .logo { font: 600 20px var(--sans); letter-spacing: -0.02em; }
+.p-top .logo span { color: var(--c-current); }
+.p-top .read { font-size: 14px; margin-left: 12px; }
+.p-top .legend { margin-left: auto; }
+
+.cards { position: fixed; left: 40px; top: 50%; transform: translateY(-50%); width: min(460px, 40vw); z-index: 5; pointer-events: none; }
+.card-s { position: absolute; left: 0; top: 50%; width: 100%; transform: translate(-16px, -50%); opacity: 0; transition: opacity 0.6s, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none;
+  background: rgba(255, 255, 255, 0.9); padding: 18px 20px 14px; border-left: 2px solid var(--ink); }
+.card-s.on { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+.card-s h1 { font-size: clamp(46px, 6vw, 84px); margin-bottom: 18px; }
+.card-s h2 { font-size: clamp(26px, 2.6vw, 36px); }
+.card-s .lede { font-size: 19px; }
+.card-s.side { /* the bench scenes: sit over the bench's empty top-left */ }
+.hint { font: 13px var(--mono); color: var(--ink-3); }
+kbd { font: 12px var(--mono); border: 1px solid var(--ink-3); padding: 1px 6px; border-radius: 3px; }
+.live { display: grid; grid-template-columns: repeat(3, 1fr); margin: 10px 0 0; border-top: 1px solid var(--ink); }
+.live > div { padding: 8px 0; }
+.live dt { font-size: 13px; }
+.live dd { margin: 0; font: 500 18px var(--mono); }
+.vote { display: grid; gap: 8px; margin: 14px 0; }
+.vote button { padding: 12px 16px; border: 1px solid var(--ink); background: #fff; font-size: 17px; text-align: left; }
+.vote button[aria-pressed='true'] { background: var(--ink); color: #fff; }
+.bd-note { border-top: 1px solid var(--rule); padding-top: 10px; }
+.card-s .ar-pair { display: flex; gap: 16px; align-items: center; }
+.card-s .qr canvas { width: 140px; height: 140px; }
+.card-s .ar-pair .card { width: 220px; }
+
+/* the bench layer fades in over the world */
+.bench-layer { position: fixed; inset: 64px 28px 70px; z-index: 4; opacity: 0; pointer-events: none; transition: opacity 0.7s; }
+.bench-layer.on { opacity: 1; pointer-events: auto; }
+.bench-layer .lab { height: 100%; }
+.bench-layer .bench { min-height: 0; height: 100%; }
+.bench-layer .lab-side { overflow-y: auto; }
+body.on-bench .cards { left: 52px; top: 120px; transform: none; width: min(380px, 32vw); }
+body.on-bench .card-s { top: 0; transform: translate(-16px, 0); }
+body.on-bench .card-s.on { transform: none; }
+
+.p-nav { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 14px; }
+.p-nav button { width: 36px; height: 36px; border: 1px solid var(--ink); background: #fff; font-size: 16px; }
+.p-nav ol { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.p-nav li { width: 22px; height: 3px; background: var(--rule); cursor: pointer; }
+.p-nav li.on { background: var(--ink); }
+
+@media (max-width: 800px) {
+  .cards { left: 16px; right: 16px; width: auto; top: auto; bottom: 70px; transform: none; }
+  .card-s { top: auto; bottom: 0; transform: translateY(16px); }
+  .card-s.on { transform: none; }
+  .p-top .legend { display: none; }
+  .bench-layer { inset: 56px 8px 64px; }
+}
+
+/* breakdown: the bench trembles */
+body.shake .bench-layer { animation: shake 0.14s linear infinite; }
+@keyframes shake { 25% { transform: translate(2px, -1px); } 50% { transform: translate(-2px, 1px); } 75% { transform: translate(1px, 2px); } }
+@media (prefers-reduced-motion: reduce) { body.shake .bench-layer { animation: none; } }

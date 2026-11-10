@@ -44,7 +44,7 @@ function instrument(name, { w, h, d, title, knob = true, jacks }) {
   g.add(screen);
   const ctx = canvas.getContext('2d');
   g.userData.show = (text, color = hex(C.ink), note = '') => {
-    ctx.fillStyle = '#f3f0ea';
+    ctx.fillStyle = '#f2f2f2';
     ctx.fillRect(0, 0, 512, 150);
     ctx.fillStyle = color;
     ctx.font = '500 78px "IBM Plex Mono", ui-monospace, monospace';

@@ -575,8 +575,8 @@
     step('guide: loads, the line drawings and both benches render, no errors', async () => {
       frame.width = 1280;
       frame.height = 800;
-      frame.src = '../guide/';
-      await until(() => win().location.pathname.endsWith('/guide/') && gd(), 30000, 'guide to load');
+      frame.src = '../guide/page.html';
+      await until(() => win().location.pathname.endsWith('/guide/page.html') && gd(), 30000, 'guide to load');
       errors.length = 0;
       win().addEventListener('error', (e) => errors.push(e.message));
       win().addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
@@ -668,6 +668,58 @@
       frame.width = 1280;
       frame.height = 800;
       expect(errors.length === 0, errors.join(' | '));
+    });
+
+    // ---------------------------------------------------- guide/ fly-through (the presentation)
+
+    const pr = () => win().__present;
+    const keyIn = (k) => win().dispatchEvent(new (win().KeyboardEvent)('keydown', { key: k, bubbles: true }));
+
+    step('fly-through: opens on the title scene; → advances, number keys jump', async () => {
+      frame.width = 1280;
+      frame.height = 800;
+      frame.src = '../guide/';
+      await until(() => win().location.pathname.endsWith('/guide/') && pr(), 30000, 'the fly-through to load');
+      errors.length = 0;
+      win().addEventListener('error', (e) => errors.push(e.message));
+      expect(win().__errors.length === 0, win().__errors.join(' | '));
+      expect(pr().index === 0 && doc().querySelector('.card-s[data-scene="0"]').classList.contains('on'), 'title card');
+      keyIn('ArrowRight');
+      expect(pr().index === 1, `scene ${pr().index}`);
+      keyIn('3');
+      expect(pr().index === 2, `scene ${pr().index}`);
+      await until(() => pr().boards.every((b) => b.progress >= 1), 8000, 'ρ, E and V to draw themselves');
+    });
+
+    step('fly-through 4: the battery ramps V_R up to 10 V; live W follows', async () => {
+      keyIn('ArrowRight');
+      await until(() => pr().junction.state.VR >= 9.99, 10000, 'V_R ramp');
+      await until(() => doc().getElementById('p-w').textContent === '1.66 µm', 5000, 'live W = 1.66 µm');
+    });
+
+    step('fly-through 5–6: vote, bring the ammeter, wire it in series, read 13.3 pA', async () => {
+      keyIn('ArrowRight');
+      expect(doc().getElementById('bench-layer').classList.contains('on'), 'bench layer shown');
+      click(doc().querySelector('[data-guess="tiny"]'));
+      click(doc().getElementById('p-add-ammeter'));
+      pr().lab.wire([['supply:+', 'ammeter:in'], ['ammeter:out', 'diode:n'], ['diode:p', 'supply:-']]);
+      keyIn('ArrowRight');
+      expect(doc().getElementById('m-title').textContent === '13.3 pA', `reading ${doc().getElementById('m-title').textContent}`);
+      expect(doc().getElementById('m-text').textContent.startsWith('You said a tiny one.'), 'answer refers to the guess');
+      pr().lab.setSupply(120);
+      expect(doc().getElementById('m-title').textContent === 'Breakdown.', 'breakdown');
+      expect(doc().body.classList.contains('shake'), 'the bench shakes');
+      pr().lab.setSupply(0);
+    });
+
+    step('fly-through: graded, AR and the end scene link to the full page; no errors', async () => {
+      keyIn('ArrowRight');
+      expect(pr().junction.state.graded, 'graded junction');
+      keyIn('ArrowRight');
+      keyIn('ArrowRight');
+      expect(pr().index === 8, `scene ${pr().index}`);
+      expect(doc().querySelector('.card-s[data-scene="8"] a[href="page.html"]'), 'link to the page');
+      expect(errors.length === 0 && win().__errors.length === 0, [...errors, ...win().__errors].join(' | '));
     });
 
     // ----------------------------------------------------------------- run

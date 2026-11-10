@@ -57,14 +57,14 @@ export function createLineJunction({ markerSize = 9 } = {}) {
     side.add(solid(box, { fill: tint, opacity: 0.55 })); // a cutaway: the carriers show through
     const metal = new THREE.BoxGeometry(CT, H * 1.1, D * 1.06);
     metal.translate(sign * (LEN / 2 - CT / 2), (H * 1.1) / 2, 0);
-    side.add(solid(metal, { fill: 0xe7e3dc }));
+    side.add(solid(metal, { fill: 0xe8e8e8 }));
     const tag = label(sign < 0 ? 'p-type' : 'n-type', { size: 0.03, color: hex(sign < 0 ? C.hole : C.electron), weight: 600 });
     tag.position.set(sign * (half - 0.07), H + 0.04, D / 2);
     side.add(tag);
   }
   const base = new THREE.BoxGeometry(LEN + 0.04, 0.02, D + 0.08);
   base.translate(0, -0.01, 0);
-  group.add(solid(base, { fill: 0xf4f1eb }));
+  group.add(solid(base, { fill: 0xf3f3f3 }));
 
   // depletion region: amber-tinted volume with amber edges, stretched each frame
   const depBox = new THREE.BoxGeometry(1, H * 1.002, D * 1.004);
@@ -107,7 +107,7 @@ export function createLineJunction({ markerSize = 9 } = {}) {
   const tex = {
     ring: markerTexture('ring', hex(C.hole)), dot: markerTexture('dot', hex(C.electron)),
     minusOn: markerTexture('minus', hex(C.ion)), plusOn: markerTexture('plus', hex(C.ion)),
-    minusOff: markerTexture('minus', '#d8d1c4'), plusOff: markerTexture('plus', '#d8d1c4'),
+    minusOff: markerTexture('minus', '#d4d4d4'), plusOff: markerTexture('plus', '#d4d4d4'),
   };
   let sites = null;
   let sets = null;

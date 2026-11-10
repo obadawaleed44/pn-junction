@@ -148,7 +148,8 @@ export function createLab(root, { mode = 'open', onStep = () => {}, onChange = (
       bench.setAmmeter(c.valid && c.hasAmmeter ? formatSI(reading, 'A') : '- - -', !!state.op?.limited);
       bench.junction.setState({ junction: JUNCTION, VR: c.valid ? VR : 0 });
       const I = Math.abs(loop);
-      bench.setFlow(c.valid && I > 0 ? Math.max(0.12, Math.min(3, (Math.log10(I) + 15.5) / 4)) : 0, c.path ?? new Map());
+      // current is only drawn once an ammeter is in the loop: until then, nobody knows
+      bench.setFlow(c.valid && c.hasAmmeter && I > 0 ? Math.max(0.12, Math.min(3, (Math.log10(I) + 15.5) / 4)) : 0, c.path ?? new Map());
     }
     const W = depletionWidth(JUNCTION, Math.max(-0.68, c.valid ? VR : 0));
     const ratio = maxField(JUNCTION, Math.max(0, VR)) / criticalField(JUNCTION);

@@ -7,11 +7,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 /** The meaning of every colour on the site. Kept in sync with --c-* in guide.css. */
 export const C = {
-  paper: 0xfbf8f3,
+  paper: 0xffffff,
   face: 0xffffff,
-  ink: 0x1d1b18,
-  hair: 0x9d968a,
-  grid: 0xe9e3d8,
+  ink: 0x111111,
+  hair: 0x999999,
+  grid: 0xe8e8e8,
   hole: 0xd9485f,      // holes, p-side
   electron: 0x2f6fd6,  // electrons, n-side
   ion: 0xc98a12,       // fixed charge, ρ
@@ -39,7 +39,7 @@ export function solid(geometry, { fill = C.face, edge = C.ink, hidden = true, op
 }
 
 /** A flat label lying on a face or floating, drawn on a canvas (crisp, any font). */
-export function label(text, { size = 0.035, color = '#1d1b18', weight = 500, font = '"IBM Plex Sans", system-ui, sans-serif', align = 'center', sprite = true } = {}) {
+export function label(text, { size = 0.035, color = '#111111', weight = 500, font = '"IBM Plex Sans", system-ui, sans-serif', align = 'center', sprite = true } = {}) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const texture = new THREE.CanvasTexture(canvas);

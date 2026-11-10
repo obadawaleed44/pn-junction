@@ -180,7 +180,7 @@ drawGraded();
   const off = Math.floor((canvas.width - cell * n) / 2);
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#1d1b18';
+  ctx.fillStyle = '#111111';
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
 })();
 
