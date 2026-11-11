@@ -12,7 +12,7 @@
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { OneEuroFilter } from './filter.js';
 
-// Same pinned version as in the import map (index.html).
+// Same pinned version as in the import map (exhibit.html).
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
 const MODEL_URL = './models/hand_landmarker.task'; // hosted in this repo
 

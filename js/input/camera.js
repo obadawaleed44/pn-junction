@@ -1,5 +1,5 @@
 // camera.js — turning the webcam hand tracking on and off.
-// Shared by both pages (index.html and mystery.html).
+// Shared by both pages (exhibit.html and mystery.html).
 
 import { startHandTracking } from './hands.js';
 import { hasSavedCalibration } from './calibration.js';

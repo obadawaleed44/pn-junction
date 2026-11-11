@@ -99,6 +99,11 @@ def run_page(browser, url, extra_flags, show, timeout):
     except queue.Empty:
         return [{"group": "Runner", "name": f"{url} reported back", "pass": False, "error": f"no results after {timeout} s"}]
     finally:
+        if os.name == "nt":
+            # Edge starts helper processes (GPU, renderer); kill the whole tree, or they
+            # pile up across runs and slow every later test down.
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         process.kill()
         process.wait()
         shutil.rmtree(profile, ignore_errors=True)

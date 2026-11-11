@@ -16,7 +16,7 @@
 </head>
 <body>
   <!-- The real app, driven from outside like a visitor would use it. -->
-  <iframe id="app" src="../index.html" width="1280" height="800" allow="camera; autoplay"></iframe>
+  <iframe id="app" src="../exhibit.html" width="1280" height="800" allow="camera; autoplay"></iframe>
   <ol id="log"></ol>
 
   <script type="module">
@@ -288,7 +288,7 @@
       $('scene').setPointerCapture = () => {};
       $('scene').releasePointerCapture = () => {};
       expect(!$('intro').hidden && pn().state.mode === 'intro', 'start screen visible');
-      expect(doc().querySelector('a.brand').getAttribute('href') === 'index.html', 'link back to the main page');
+      expect(doc().querySelector('a.brand').getAttribute('href') === 'exhibit.html', 'link back to the main page');
     });
 
     step('mystery page: sweeping the sealed diode gives a straight 1/C² line that recovers V_bi and N', async () => {

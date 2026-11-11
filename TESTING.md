@@ -39,7 +39,7 @@ To *see* the physics tests: start the server (Part B, step 1), then open
 python serve.py
 ```
 
-Open **http://localhost:8000** in Chrome or Edge, full screen (F11). A laptop screen of
+Open **http://localhost:8000/exhibit.html** in Chrome or Edge, full screen (F11). A laptop screen of
 1366 px or wider shows text, model and Physics panel side by side.
 
 ### 2. The look
